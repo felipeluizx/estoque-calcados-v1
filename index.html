@@ -89,7 +89,7 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-square h-6 w-6 mb-1 text-green-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
           <span class="text-xs">Entrada</span>
         </a>
-        <a href="#saida" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+        <a href="#saida" class="menu-item flex col flex-col items-center text-center p-2 rounded-lg">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-square h-6 w-6 mb-1 text-red-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>
           <span class="text-xs">Saída</span>
         </a>
@@ -282,20 +282,38 @@
       { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
     ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
 
-    // Inventário e histórico (com persistência simples)
-    let inventory = [
-      { locationId: 'A-FUNDO', productId: 1, quantity: 50 },
-      { locationId: 'B-FRENTE', productId: 24, quantity: 120 },
-      { locationId: 'D-FUNDO', productId: 146, quantity: 75 },
-      { locationId: 'C-FRENTE', productId: 131, quantity: 200 },
-    ];
+// Inventário e histórico inicial (carregados do KV)
+let inventory = [];
+let history = [];
 
-    let history = [
-      { date: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), type: 'ENTRADA', details: '+200 caixas de FORUM BAIXA SINTÉTICO PRETO em C-FRENTE' },
-      { date: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), type: 'ENTRADA', details: '+75 caixas de VANS ALTA SINTÉTICO PRETO BRANCO em D-FUNDO' },
-      { date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), type: 'ENTRADA', details: '+120 caixas de BETA ALTA CAMURÇA BLACK em B-FRENTE' },
-      { date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), type: 'ENTRADA', details: '+50 caixas de BAD BUNNY ALTA CAMURÇA BEGE em A-FUNDO' },
-    ];
+// --- carregar do KV (Cloudflare D1 via Pages Function) ---
+async function loadFromServer() {
+  try {
+    const res = await fetch('/api/estoque');
+    if (res.ok) {
+      const data = await res.json();
+      inventory = Array.isArray(data.inventory) ? data.inventory : [];
+      history  = Array.isArray(data.history)   ? data.history   : [];
+    }
+  } catch (err) {
+    console.warn('Não foi possível carregar do KV, usando arrays vazios', err);
+    inventory = [];
+    history = [];
+  }
+}
+
+// --- salvar no KV sempre que algo muda ---
+async function persist() {
+  try {
+    await fetch('/api/estoque', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventory, history })
+    });
+  } catch (err) {
+    console.warn('Falha ao salvar no KV', err);
+  }
+}
 
     const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
     const adminPassword = '123';
@@ -304,21 +322,6 @@
     const pages = document.querySelectorAll('.page');
     const menuItems = document.querySelectorAll('.menu-item');
     const headerTitle = document.getElementById('header-title');
-
-    // Persistência
-    const loadState = () => {
-      try {
-        const inv = JSON.parse(localStorage.getItem('inventory_v1') || '[]');
-        const hist = JSON.parse(localStorage.getItem('history_v1') || '[]');
-        if (Array.isArray(inv) && inv.length) inventory = inv;
-        if (Array.isArray(hist) && hist.length) history = hist;
-      } catch {}
-    };
-    const saveState = () => {
-      localStorage.setItem('inventory_v1', JSON.stringify(inventory));
-      localStorage.setItem('history_v1', JSON.stringify(history));
-    };
-    loadState();
 
     // --- FILTROS DO MAPA ---
     let mapFilters = { modelo: '', grade: '', variacao: '' };
@@ -486,7 +489,7 @@
       const locationsHtml = mapLayout.locations.map(loc => {
         const fundoId = `${loc}-FUNDO`;
         const frenteId = `${loc}-FRENTE`;
-        const itemsFundo = inventory.filter(i => i.locationId === fundoId);
+        const itemsFundo = inventory.filter(i => i.locationId === fundoId);   <!-- correção aqui -->
         const itemsFrente = inventory.filter(i => i.locationId === frenteId);
         const cls = (items) => items.length ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
         return `
@@ -728,7 +731,9 @@
         else { inventory.push({ locationId: location, productId: product.id, quantity: qty }); }
 
         addHistory('ENTRADA', `+${qty} caixas de ${product.nomeCompleto} em ${location}`);
-        saveState(); showToast('Entrada registrada com sucesso!'); goTo('#mapa');
+        persist(); // <-- salvar online
+        showToast('Entrada registrada com sucesso!');
+        goTo('#mapa');
       });
     }
 
@@ -756,7 +761,9 @@
         if (qty === it.quantity) { inventory.splice(idx,1); addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId} (estoque zerado)`); }
         else { it.quantity -= qty; addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId}`); }
 
-        saveState(); showToast('Saída registrada com sucesso!'); goTo('#mapa');
+        persist(); // <-- salvar online
+        showToast('Saída registrada com sucesso!');
+        goTo('#mapa');
       });
     }
 
@@ -816,8 +823,9 @@
       showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', () => {
         if (history.length) {
           const last = history.shift();
+          persist(); // <-- salvar alteração do histórico
           showToast(`Ação "${last.type}" foi desfeita (simulação).`);
-          saveState(); rerenderCurrentPage();
+          rerenderCurrentPage();
         }
       });
     };
@@ -825,9 +833,12 @@
     const handleResetStock = () => {
       showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
         showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', () => {
-          inventory = []; history = []; addHistory('RESET','O estoque foi completamente zerado.');
+          inventory = [];
+          history = [];
+          addHistory('RESET','O estoque foi completamente zerado.');
+          persist(); // <-- salvar online
           showToast('Estoque resetado com sucesso.', 'error');
-          saveState(); rerenderCurrentPage();
+          rerenderCurrentPage();
         });
       });
     };
@@ -950,7 +961,11 @@
     };
 
     window.addEventListener('hashchange', navigate);
-    navigate();
+    (async () => {
+      await loadFromServer(); // <-- busca do KV
+      navigate();             // só depois de carregar os dados
+    })();
+
   });
   </script>
 </body>

@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Controle de Estoque - Indústria de Calçados</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="theme-color" content="#1d4ed8"/>
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+    .menu-item.active { background-color: #1d4ed8; color: white; }
+    .modal-backdrop { background-color: rgba(0,0,0,0.5); }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+    select:disabled { background-color: #e9ecef; cursor: not-allowed; }
+    .map-card-position { transition: all 0.2s ease-in-out; }
+  </style>
+</head>
+<body class="antialiased text-gray-800">
+  <div id="app" class="flex flex-col md:flex-row min-h-screen">
+    <aside class="hidden md:flex flex-col w-64 bg-gray-800 text-white">
+      <div class="flex items-center justify-center h-16 border-b border-gray-700">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-boxes"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span class="ml-2 text-lg font-bold">Estoque Calçados</span>
+      </div>
+      <nav class="flex-1 px-2 py-4 space-y-2">
+        <a href="#home" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Dashboard</a>
+        <a href="#entrada" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Entrada</a>
+        <a href="#saida" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Saída</a>
+        <a href="#mapa" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Mapa do Estoque</a>
+        <a href="#relatorios" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Relatórios</a>
+        <a href="#historico" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Histórico</a>
+        <a href="#admin" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Admin</a>
+      </nav>
+    </aside>
+
+    <div class="flex-1 flex flex-col">
+      <header class="md:hidden flex items-center justify-between bg-gray-800 text-white p-4 shadow-md sticky top-0 z-10">
+        <div class="flex items-center">
+          <span id="header-title" class="ml-2 text-lg font-bold">Dashboard</span>
+        </div>
+      </header>
+
+      <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div id="page-home" class="page"></div>
+        <div id="page-entrada" class="page hidden"></div>
+        <div id="page-saida" class="page hidden"></div>
+        <div id="page-mapa" class="page hidden"></div>
+        <div id="page-relatorios" class="page hidden"></div>
+        <div id="page-historico" class="page hidden"></div>
+        <div id="page-admin" class="page hidden"></div>
+      </main>
+
+      <nav class="md:hidden grid grid-cols-5 gap-1 p-2 bg-gray-800 text-white border-t border-gray-700 sticky bottom-0">
+        <a href="#home" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Dashboard</span></a>
+        <a href="#entrada" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Entrada</span></a>
+        <a href="#saida" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Saída</span></a>
+        <a href="#mapa" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Mapa</span></a>
+        <a href="#admin" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Admin</span></a>
+      </nav>
+    </div>
+  </div>
+
+  <div id="modal-container" class="hidden"></div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // --- API helpers ---
+    async function apiGet(path) {
+      const r = await fetch(path, { headers: { "accept": "application/json" } });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+    async function apiPost(path, body) {
+      const r = await fetch(path, {
+        method: "POST",
+        headers: { "content-type": "application/json", "accept": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+
+    // --- Catálogo de produtos ---
+    const productList = [
+      { id: 1, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE" },
+      { id: 2, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 3, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 4, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 5, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 6, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "OFF VERDE" },
+      { id: 7, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 8, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE" },
+      { id: 9, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 10, modelo: "BAD BUNNY", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 11, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE" },
+      { id: 12, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 13, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 14, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 15, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 16, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF VERDE" },
+      { id: 17, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 18, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "ROSA" },
+      { id: 19, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE" },
+      { id: 20, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 21, modelo: "BAD BUNNY", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 22, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE BRANCO" },
+      { id: 23, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE CINZA" },
+      { id: 24, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BLACK" },
+      { id: 25, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 26, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 27, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 28, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA PRETO" },
+      { id: 29, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "LARANJA" },
+      { id: 30, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM BARATA" },
+      { id: 31, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM CREME" },
+      { id: 32, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 33, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO CINZA" },
+      { id: 34, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO COSTURA BRANCO" },
+      { id: 35, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE MUSGO" },
+      { id: 36, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 37, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 38, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 39, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 40, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE BRANCO" },
+      { id: 41, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE CINZA" },
+      { id: 42, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BLACK" },
+      { id: 43, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 44, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 45, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 46, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA PRETO" },
+      { id: 47, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "LARANJA" },
+      { id: 48, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM BARATA" },
+      { id: 49, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM CREME" },
+      { id: 50, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 51, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO CINZA" },
+      { id: 52, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO COSTURA BRANCO" },
+      { id: 53, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE MUSGO" },
+      { id: 54, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 55, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 56, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 57, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 58, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "AZUL" },
+      { id: 59, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 60, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "BRANCO VERDE" },
+      { id: 61, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 62, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 63, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 64, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "MOSTARDA" },
+      { id: 65, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 66, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 67, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 68, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
+      { id: 69, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 70, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "GRAFITE" },
+      { id: 71, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO BEGE" },
+      { id: 72, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO PRETO" },
+      { id: 73, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 74, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 75, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 76, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "AZUL" },
+      { id: 77, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 78, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BRANCO VERDE" },
+      { id: 79, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 80, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 81, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 82, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "GRAFITE" },
+      { id: 83, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "LARANJA" },
+      { id: 84, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM" },
+      { id: 85, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MOSTARDA" },
+      { id: 86, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 87, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 88, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 89, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "ROSA" },
+      { id: 90, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "SALMÃO" },
+      { id: 91, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
+      { id: 92, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE ÁGUA" },
+      { id: 93, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 99, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "GRAFITE" },
+      { id: 100, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "PRETO BEGE" },
+      { id: 101, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "PRETO PRETO BEGE" },
+      { id: 102, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BOBBIE GOODS" },
+      { id: 103, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 104, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 105, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 106, modelo: "CAMPUS", grade: "INFANTIL", material: "BOBBIE GOODS", variacao: "BOBBIE GOODS" },
+      { id: 125, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 126, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 127, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 128, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 129, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 130, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 131, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 132, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 133, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "AZUL" },
+      { id: 134, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO CINZA" },
+      { id: 135, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 136, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "CHUMBO" },
+      { id: 137, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "OFF MARROM" },
+      { id: 138, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "ONÇA" },
+      { id: 139, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 140, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 141, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "ROSA" },
+      { id: 142, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "AZUL" },
+      { id: 143, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "BEGE" },
+      { id: 144, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 145, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "CINZA BRANCO" },
+      { id: 146, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 147, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO CINZA" },
+      { id: 148, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO PRETO" },
+      { id: 149, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "AZUL" },
+      { id: 150, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BEGE" },
+      { id: 151, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 152, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "CINZA BRANCO" },
+      { id: 153, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 154, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO CINZA" },
+      { id: 155, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO PRETO" },
+      { id: 156, modelo: "XL SUEDE", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 157, modelo: "XL SUEDE", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 158, modelo: "XL SUEDE", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 159, modelo: "XL SUEDE", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 160, modelo: "XL SUEDE", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 161, modelo: "XL SUEDE", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 162, modelo: "XL SUEDE", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 163, modelo: "XL SUEDE", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 164, modelo: "XL SUEDE", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 165, modelo: "XL SUEDE", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 166, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" }
+    ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
+
+    // Estado carregado do servidor
+    let inventory = [];
+    let history = [];
+    let adminAuthenticated = false;
+
+    const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
+    const pages = document.querySelectorAll('.page');
+    const menuItems = document.querySelectorAll('.menu-item');
+    const headerTitle = document.getElementById('header-title');
+
+    async function syncFromServer() {
+      [inventory, history] = await Promise.all([
+        apiGet("/api/inventory"),
+        apiGet("/api/history")
+      ]);
+    }
+
+    // --- Mapa filtros ---
+    let mapFilters = { modelo: '', grade: '', variacao: '' };
+    const matchesMapFilter = (product) => {
+      if (!product) return false;
+      if (mapFilters.modelo && product.modelo !== mapFilters.modelo) return false;
+      if (mapFilters.grade && product.grade !== mapFilters.grade) return false;
+      if (mapFilters.variacao && product.variacao !== mapFilters.variacao) return false;
+      return true;
+    };
+
+    // --- Renderizações ---
+    const renderDashboard = () => {
+      const container = document.getElementById('page-home');
+      const totalBoxes = inventory.reduce((s,i)=>s+i.quantity,0);
+      const occupied = new Set(inventory.map(i=>i.locationId)).size;
+      const totalSlots = mapLayout.locations.length * mapLayout.positions.length;
+
+      const productCounts = inventory.reduce((acc, it) => {
+        const p = productList.find(pp => pp.id === it.productId);
+        if (p) acc[p.modelo] = (acc[p.modelo] || 0) + it.quantity;
+        return acc;
+      }, {});
+      const top = Object.entries(productCounts).sort((a,b)=>b[1]-a[1])[0];
+
+      container.innerHTML = `
+        <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm">Caixas em Estoque</h3><p class="text-3xl font-bold mt-2">${totalBoxes.toLocaleString('pt-BR')}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm">Posições Ocupadas</h3><p class="text-3xl font-bold mt-2">${occupied} / ${totalSlots}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm">Modelo com Mais Estoque</h3><p class="text-2xl font-bold mt-2 truncate">${top?top[0]:'N/A'}</p><p class="text-gray-500">${top?`${top[1].toLocaleString('pt-BR')} caixas`:''}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm">Produtos Únicos</h3><p class="text-3xl font-bold mt-2">${new Set(inventory.map(i=>i.productId)).size}</p></div>
+        </div>
+        <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
+          <h3 class="text-xl font-bold mb-4">Movimentações Recentes</h3>
+          <ul class="space-y-3">
+            ${history.slice(0,5).map(h=>`
+              <li class="flex items-start">
+                <span class="text-sm text-gray-500 w-28">${new Date(h.date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+                <span class="font-semibold ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
+                <span class="ml-4 text-gray-700">${h.details}</span>
+              </li>`).join('')}
+          </ul>
+        </div>`;
+    };
+
+    const renderEntrada = () => {
+      const container = document.getElementById('page-entrada');
+      const modelos = [...new Set(productList.map(p=>p.modelo))].sort();
+      const allLocations = []; mapLayout.locations.forEach(l => mapLayout.positions.forEach(pos => allLocations.push(`${l}-${pos}`)));
+
+      container.innerHTML = `
+      <h1 class="text-3xl font-bold mb-6 text-green-700">Registrar Entrada</h1>
+      <form id="entrada-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
+        <div><label class="block text-sm font-medium text-gray-700">1. Modelo</label>
+          <select id="entrada-modelo" required class="mt-1 block w-full p-2 border rounded-md">
+            <option value="" disabled selected>Selecione o modelo</option>
+            ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
+          </select>
+        </div>
+        <div><label class="block text-sm font-medium text-gray-700">2. Grade</label>
+          <select id="entrada-grade" required disabled class="mt-1 block w-full p-2 border rounded-md"><option value="">--</option></select>
+        </div>
+        <div><label class="block text-sm font-medium text-gray-700">3. Material</label>
+          <select id="entrada-material" required disabled class="mt-1 block w-full p-2 border rounded-md"><option value="">--</option></select>
+        </div>
+        <div><label class="block text-sm font-medium text-gray-700">4. Variação / Cor</label>
+          <select id="entrada-variacao" required disabled class="mt-1 block w-full p-2 border rounded-md"><option value="">--</option></select>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="block text-sm font-medium text-gray-700">5. Quantidade</label>
+            <input type="number" id="entrada-quantidade" required min="1" class="mt-1 block w-full p-2 border rounded-md">
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700">6. Localização</label>
+            <select id="entrada-location" required class="mt-1 block w-full p-2 border rounded-md">
+              <option value="" disabled selected>Selecione a posição</option>
+              ${allLocations.map(l=>`<option value="${l}">${l}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-bold">Confirmar Entrada</button>
+      </form>`;
+      setupEntradaFormListeners();
+    };
+
+    const renderSaida = () => {
+      const container = document.getElementById('page-saida');
+      if (!inventory.length) {
+        container.innerHTML = \`
+          <h1 class="text-3xl font-bold mb-6 text-red-700">Registrar Saída</h1>
+          <div class="bg-white p-6 rounded-lg shadow-md text-center"><p class="text-gray-600">Não há itens no estoque para registrar saída.</p></div>\`;
+        return;
+      }
+      container.innerHTML = \`
+        <h1 class="text-3xl font-bold mb-6 text-red-700">Registrar Saída</h1>
+        <form id="saida-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
+          <div><label class="block text-sm font-medium text-gray-700">1. Item em Estoque</label>
+            <select id="saida-item" required class="mt-1 block w-full p-2 border rounded-md">
+              <option value="" disabled selected>Selecione um item para dar baixa</option>
+              ${
+                inventory.map(it => {
+                  const p = productList.find(pp=>pp.id===it.productId);
+                  const label = \`(\${it.locationId}) \${p?.nomeCompleto || it.productId} - \${it.quantity} caixas\`;
+                  return { id: it.id, locationId: it.locationId, label };
+                })
+                .sort((a,b)=>a.locationId.localeCompare(b.locationId))
+                .map(r=>\`<option value="\${r.id}">\${r.label}</option>\`).join('')
+              }
+            </select>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700">2. Quantidade a Retirar</label>
+            <input type="number" id="saida-quantidade" required min="1" class="mt-1 block w-full p-2 border rounded-md" placeholder="Máx: 0">
+          </div>
+          <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 font-bold">Confirmar Saída</button>
+        </form>\`;
+      setupSaidaFormListeners();
+    };
+
+    const renderMap = () => {
+      const container = document.getElementById('page-mapa');
+      const modelos = [...new Set(productList.map(p => p.modelo))].sort();
+
+      const filtersHtml = \`
+        <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
+            <select id="map-modelo" class="w-full p-2 border rounded-md"><option value="">Todos</option>\${modelos.map(m=>\`<option value="\${m}">\${m}</option>\`).join('')}</select>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+            <select id="map-grade" class="w-full p-2 border rounded-md" disabled><option value="">Todas</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700 mb-1">Cor (Variação)</label>
+            <select id="map-variacao" class="w-full p-2 border rounded-md" disabled><option value="">Todas</option></select>
+          </div>
+          <div class="flex items-end gap-2"><button id="map-clear" class="w-full md:w-auto bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md">Limpar</button></div>
+        </div>
+        <div class="mb-4"><input type="text" id="map-search" placeholder="Busca livre (modelo/material/cor)..." class="w-full max-w-md p-2 border rounded-md"></div>
+      \`;
+
+      const locationsHtml = mapLayout.locations.map(loc => {
+        const fundoId = \`\${loc}-FUNDO\`; const frenteId = \`\${loc}-FRENTE\`;
+        const itemsFundo = inventory.filter(i => i.locationId === fundoId);
+        const itemsFrente = inventory.filter(i => i.locationId === frenteId);
+        const cls = items => items.length ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
+        return \`
+          <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
+            <div class="font-bold text-gray-700 border-b pb-1 text-lg">\${loc}</div>
+            <div data-location-id="\${fundoId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold \${cls(itemsFundo)}">FUNDO \${itemsFundo.length ? \`(\${itemsFundo.length})\` : ''}</div>
+            <div data-location-id="\${frenteId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold \${cls(itemsFrente)}">FRENTE \${itemsFrente.length ? \`(\${itemsFrente.length})\` : ''}</div>
+          </div>\`;
+      }).join('');
+
+      container.innerHTML = \`
+        <h1 class="text-3xl font-bold mb-2">Mapa do Estoque</h1>
+        <p class="text-gray-600 mb-4">Use os filtros ou a busca livre. As posições que contêm o produto selecionado ficam destacadas.</p>
+        \${filtersHtml}
+        <div id="map-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">\${locationsHtml}</div>
+        <p id="map-empty" class="hidden mt-4 text-sm text-gray-600">Nenhuma posição atende aos filtros atuais.</p>\`;
+
+      document.querySelectorAll('.map-card-position').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const locationId = cell.dataset.locationId || cell.getAttribute('data-location-id');
+          const items = inventory.filter(i => i.locationId === locationId);
+          showMapCellModal(locationId, items);
+        });
+      });
+
+      const modeloSel = document.getElementById('map-modelo');
+      const gradeSel = document.getElementById('map-grade');
+      const variacaoSel = document.getElementById('map-variacao');
+      const searchInput = document.getElementById('map-search');
+      const clearBtn = document.getElementById('map-clear');
+
+      const resetSelect = (el, label, disabled=true) => { el.innerHTML = `<option value="">${label}</option>`; el.disabled = !!disabled; };
+
+      const populateGrades = () => {
+        resetSelect(gradeSel, 'Todas', false);
+        const grades = [...new Set(productList.filter(p => !mapFilters.modelo || p.modelo === mapFilters.modelo).map(p => p.grade))].sort();
+        gradeSel.innerHTML = `<option value="">Todas</option>` + grades.map(g=>`<option value="${g}">${g}</option>`).join('');
+      };
+      const populateVariacoes = () => {
+        resetSelect(variacaoSel, 'Todas', false);
+        const variacoes = [...new Set(productList.filter(p => (!mapFilters.modelo || p.modelo === mapFilters.modelo) && (!mapFilters.grade || p.grade === mapFilters.grade)).map(p => p.variacao))].sort();
+        variacaoSel.innerHTML = `<option value="">Todas</option>` + variacoes.map(v=>`<option value="${v}">${v}</option>`).join('');
+      };
+
+      const applyMapHighlight = () => {
+        const cards = Array.from(document.querySelectorAll('.map-card-position'));
+        cards.forEach(c => { c.classList.remove('ring-4','ring-yellow-400'); c.parentElement.classList.remove('opacity-25'); });
+
+        const hasActiveFilter = !!(mapFilters.modelo || mapFilters.grade || mapFilters.variacao);
+        const term = (searchInput.value || '').toLowerCase().trim();
+
+        const cellMatches = (locationId) => {
+          const items = inventory.filter(i => i.locationId === locationId);
+          return items.some(it => {
+            const p = productList.find(pp => pp.id === it.productId);
+            const filterOk = !hasActiveFilter ? true : matchesMapFilter(p);
+            const termOk = !term ? true : (p?.nomeCompleto?.toLowerCase().includes(term) || p?.material?.toLowerCase().includes(term));
+            return filterOk && termOk;
+          });
+        };
+
+        let matchesCount = 0;
+        cards.forEach(cell => {
+          const locationId = cell.dataset.locationId || cell.getAttribute('data-location-id');
+          if (cellMatches(locationId)) { cell.classList.add('ring-4','ring-yellow-400'); matchesCount++; }
+          else {
+            const parent = cell.parentElement;
+            const siblingId = locationId.endsWith('FUNDO') ? locationId.replace('FUNDO','FRENTE') : locationId.replace('FRENTE','FUNDO');
+            if (!cellMatches(siblingId)) parent.classList.add('opacity-25');
+          }
+        });
+        document.getElementById('map-empty').classList.toggle('hidden', matchesCount > 0);
+      };
+
+      modeloSel.addEventListener('change', () => { mapFilters.modelo = modeloSel.value; mapFilters.grade=''; mapFilters.variacao=''; populateGrades(); resetSelect(variacaoSel,'Todas',true); applyMapHighlight(); });
+      gradeSel.addEventListener('change', () => { mapFilters.grade = gradeSel.value; mapFilters.variacao=''; populateVariacoes(); applyMapHighlight(); });
+      variacaoSel.addEventListener('change', () => { mapFilters.variacao = variacaoSel.value; applyMapHighlight(); });
+      searchInput.addEventListener('input', applyMapHighlight);
+      clearBtn.addEventListener('click', () => { mapFilters = { modelo:'', grade:'', variacao:'' }; modeloSel.value=''; resetSelect(gradeSel,'Todas',true); resetSelect(variacaoSel,'Todas',true); searchInput.value=''; applyMapHighlight(); });
+
+      applyMapHighlight();
+    };
+
+    const renderReports = () => {
+      const container = document.getElementById('page-relatorios');
+      const modelos = [...new Set(productList.map(p => p.modelo))].sort();
+      const grades = [...new Set(productList.map(p => p.grade))].sort();
+      const materiais = [...new Set(productList.map(p => p.material))].sort();
+
+      container.innerHTML = \`
+        <h1 class="text-3xl font-bold mb-6">Gerador de Relatórios</h1>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div><label class="block text-sm font-medium text-gray-700">Modelo (múltiplo)</label>
+              <select id="filter-modelo" multiple size="6" class="mt-1 block w-full p-2 border rounded-md">
+                \${modelos.map(m=>\`<option value="\${m}">\${m}</option>\`).join('')}
+              </select><p class="text-xs text-gray-500 mt-1">Ctrl/Cmd para múltiplos.</p>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-700">Grade (múltiplo)</label>
+              <select id="filter-grade" multiple size="4" class="mt-1 block w-full p-2 border rounded-md">
+                \${grades.map(g=>\`<option value="\${g}">\${g}</option>\`).join('')}
+              </select>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-700">Material (múltiplo)</label>
+              <select id="filter-material" multiple size="6" class="mt-1 block w-full p-2 border rounded-md">
+                \${materiais.map(m=>\`<option value="\${m}">\${m}</option>\`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="flex flex-col md:flex-row gap-3">
+            <button id="generate-report-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Gerar Relatório</button>
+            <button id="print-report-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50" disabled>Imprimir</button>
+            <button id="export-csv-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50" disabled>Exportar CSV</button>
+          </div>
+          <div id="report-result" class="mt-6"></div>
+        </div>\`;
+      document.getElementById('generate-report-btn').addEventListener('click', generateReport);
+
+      const printBtn = document.getElementById('print-report-btn');
+      const exportBtn = document.getElementById('export-csv-btn');
+
+      printBtn.addEventListener('click', () => {
+        const html = document.getElementById('report-result').innerHTML;
+        const w = window.open('', '_blank');
+        w.document.write(\`<html><head><meta charset="utf-8"/><title>Relatório</title>
+          <style>body{font-family:Inter,Arial,sans-serif;padding:16px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;font-size:14px;}th{background:#f8f8f8;text-transform:uppercase;letter-spacing:.04em;}</style>
+          </head><body>\${html}</body></html>\`);
+        w.document.close(); w.focus(); w.print(); w.close();
+      });
+
+      exportBtn.addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('#report-result table tbody tr'))
+          .map(tr => Array.from(tr.querySelectorAll('td')).map(td => td.innerText.replace(/\s+/g,' ').trim()));
+        if (!rows.length) return;
+        const header = ['Produto','Localização','Quantidade'];
+        const csv = [header, ...rows].map(r => r.map(v => `"${v.replaceAll('"','""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download=\`relatorio-estoque-\${new Date().toISOString().slice(0,10)}.csv\`;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
+    };
+
+    const renderHistory = () => {
+      const container = document.getElementById('page-historico');
+      container.innerHTML = \`
+        <h1 class="text-3xl font-bold mb-6">Histórico de Movimentações</h1>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <ul class="divide-y divide-gray-200">
+            \${history.map(h=>\`
+              <li class="p-4">
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-lg \${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">\${h.type}</span>
+                  <span class="text-sm text-gray-500">\${new Date(h.date).toLocaleString('pt-BR')}</span>
+                </div>
+                <p class="mt-2 text-gray-700">\${h.details}</p>
+              </li>\`).join('')}
+          </ul>
+        </div>\`;
+    };
+
+    const renderAdmin = () => {
+      const container = document.getElementById('page-admin');
+      if (!adminAuthenticated) { showAdminLoginModal(); container.innerHTML = `<p class="text-center text-gray-600">Autentique-se para acessar o painel de administração.</p>`; return; }
+      container.innerHTML = \`
+        <h1 class="text-3xl font-bold mb-6">Painel de Administração</h1>
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+            <h2 class="text-xl font-bold mb-2">Ações Reversíveis</h2>
+            <p class="text-gray-600 mb-4">Cuidado: afeta o histórico.</p>
+            <button id="undo-last-action-btn" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 \${history.length ? '' : 'opacity-50 cursor-not-allowed'}" \${history.length ? '' : 'disabled'}>Desfazer Última Ação</button>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
+            <h2 class="text-xl font-bold mb-2">Ações Perigosas</h2>
+            <p class="text-gray-600 mb-4">Irreversíveis e apagam dados permanentemente.</p>
+            <button id="reset-stock-btn" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">Resetar Estoque Completo</button>
+          </div>
+        </div>\`;
+      document.getElementById('undo-last-action-btn')?.addEventListener('click', handleUndoLastAction);
+      document.getElementById('reset-stock-btn')?.addEventListener('click', handleResetStock);
+    };
+
+    // --- Lógica de formulários ---
+    function setupEntradaFormListeners() {
+      const modeloSelect = document.getElementById('entrada-modelo');
+      const gradeSelect = document.getElementById('entrada-grade');
+      const materialSelect = document.getElementById('entrada-material');
+      const variacaoSelect = document.getElementById('entrada-variacao');
+      const resetSelect = (el, ph='--') => { el.innerHTML = `<option value="">${ph}</option>`; el.disabled = true; };
+
+      modeloSelect.addEventListener('change', () => {
+        resetSelect(gradeSelect,'Selecione a grade'); resetSelect(materialSelect); resetSelect(variacaoSelect);
+        const grades = [...new Set(productList.filter(p => p.modelo === modeloSelect.value).map(p => p.grade))];
+        gradeSelect.innerHTML = `<option value="" disabled selected>Selecione a grade</option>` + grades.sort().map(g=>`<option value="${g}">${g}</option>`).join('');
+        gradeSelect.disabled = false;
+      });
+      gradeSelect.addEventListener('change', () => {
+        resetSelect(materialSelect,'Selecione o material'); resetSelect(variacaoSelect);
+        const mats = [...new Set(productList.filter(p => p.modelo === modeloSelect.value && p.grade === gradeSelect.value).map(p => p.material))];
+        materialSelect.innerHTML = `<option value="" disabled selected>Selecione o material</option>` + mats.sort().map(m=>`<option value="${m}">${m}</option>`).join('');
+        materialSelect.disabled = false;
+      });
+      materialSelect.addEventListener('change', () => {
+        resetSelect(variacaoSelect,'Selecione a variação');
+        const vars = [...new Set(productList.filter(p => p.modelo === modeloSelect.value && p.grade === gradeSelect.value && p.material === materialSelect.value).map(p => p.variacao))];
+        variacaoSelect.innerHTML = `<option value="" disabled selected>Selecione a variação</option>` + vars.sort().map(v=>`<option value="${v}">${v}</option>`).join('');
+        variacaoSelect.disabled = false;
+      });
+
+      document.getElementById('entrada-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const modelo = modeloSelect.value;
+        const grade = gradeSelect.value;
+        const material = materialSelect.value;
+        const variacao = variacaoSelect.value;
+        const qty = parseInt(document.getElementById('entrada-quantidade').value);
+        const location = document.getElementById('entrada-location').value;
+
+        const product = productList.find(p => p.modelo===modelo && p.grade===grade && p.material===material && p.variacao===variacao);
+        if (!product) return showToast('Produto não encontrado.', 'error');
+
+        await apiPost("/api/entrada", { locationId: location, productId: product.id, quantity: qty, productName: product.nomeCompleto });
+        await syncFromServer();
+        showToast('Entrada registrada com sucesso!'); goTo('#mapa');
+      });
+    }
+
+    function setupSaidaFormListeners() {
+      const itemSelect = document.getElementById('saida-item');
+      const qtdInput = document.getElementById('saida-quantidade');
+
+      const setMax = () => {
+        const id = parseInt(itemSelect.value);
+        const it = inventory.find(x => x.id === id);
+        if (!it) { qtdInput.placeholder='Máx: 0'; qtdInput.max=0; return; }
+        qtdInput.placeholder = \`Máx: \${it.quantity}\`; qtdInput.max = it.quantity;
+      };
+      itemSelect.addEventListener('change', setMax); setMax();
+
+      document.getElementById('saida-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const inventoryId = parseInt(itemSelect.value, 10);
+        const qty = parseInt(qtdInput.value, 10);
+        if (!inventoryId || !qty) return;
+
+        await apiPost("/api/saida", { inventoryId, quantity: qty });
+        await syncFromServer();
+        showToast('Saída registrada com sucesso!'); goTo('#mapa');
+      });
+    }
+
+    const addHistoryLocal = (type, details) => { history.unshift({ date: new Date().toISOString(), type, details }); };
+
+    const handleUndoLastAction = () => {
+      showCustomConfirm('Tem certeza que deseja desfazer a última ação? (simulação apenas)', async () => {
+        if (history.length) {
+          const last = history.shift();
+          showToast(\`Ação "\${last.type}" desfeita (simulação).\`);
+          rerenderCurrentPage();
+        }
+      });
+    };
+
+    const handleResetStock = () => {
+      showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', async () => {
+        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
+          await apiPost("/api/reset", {});
+          await syncFromServer();
+          showToast('Estoque resetado com sucesso.', 'error');
+          rerenderCurrentPage();
+        });
+      });
+    };
+
+    // --- Modais / Toast ---
+    const showModal = (content) => {
+      const mc = document.getElementById('modal-container');
+      mc.innerHTML = `<div class="modal-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto relative" id="modal-content">${content}</div>
+      </div>`;
+      mc.classList.remove('hidden');
+      mc.querySelector('.modal-backdrop').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    };
+    const closeModal = () => { const mc = document.getElementById('modal-container'); mc.classList.add('hidden'); mc.innerHTML=''; };
+    window.closeModal = closeModal;
+
+    const showMapCellModal = (locationId, items) => {
+      const filtered = items.filter(it => matchesMapFilter(productList.find(p => p.id === it.productId)));
+      const list = (mapFilters.modelo || mapFilters.grade || mapFilters.variacao) && filtered.length ? filtered : items;
+      let content;
+      if (list && list.length) {
+        const warn = (!filtered.length && (mapFilters.modelo || mapFilters.grade || mapFilters.variacao))
+          ? `<p class="text-xs text-gray-500 mb-2">* Não há itens que combinem com o filtro nesta posição. Exibindo todos.</p>` : '';
+        const lis = list.map(it => {
+          const p = productList.find(pp => pp.id === it.productId);
+          return `<li class="py-2 border-b last:border-b-0"><p class="font-semibold text-gray-800">${p?.nomeCompleto || it.productId}</p><p class="text-gray-600"><strong>Quantidade:</strong> ${it.quantity} caixas</p></li>`;
+        }).join('');
+        content = `
+          <div class="p-6">
+            <div class="flex justify-between items-start">
+              <h2 class="text-2xl font-bold mb-2">Posição: ${locationId}</h2>
+              <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 -mt-2 -mr-2">✕</button>
+            </div>
+            ${warn}
+            <ul class="divide-y">${lis}</ul>
+          </div>`;
+      } else {
+        content = `
+          <div class="p-6">
+            <div class="flex justify-between items-start">
+              <h2 class="text-2xl font-bold mb-4">Posição: ${locationId}</h2>
+              <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 -mt-2 -mr-2">✕</button>
+            </div>
+            <p class="text-gray-600 mb-4">Esta posição está livre.</p>
+            <a href="#entrada" class="block text-center w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700" onclick="closeModal()">Registrar Entrada Aqui</a>
+          </div>`;
+      }
+      showModal(content);
+    };
+
+    const showAdminLoginModal = () => {
+      const content = `
+        <form id="admin-login-form" class="p-6 space-y-4">
+          <h2 class="text-2xl font-bold">Acesso Restrito</h2>
+          <p class="text-sm text-gray-600">Insira a senha de administrador.</p>
+          <div><label class="block text-sm font-medium text-gray-700">Senha</label>
+            <input type="password" id="password" required class="mt-1 block w-full p-2 border rounded-md">
+          </div>
+          <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Entrar</button>
+        </form>`;
+      showModal(content);
+      document.getElementById('admin-login-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const pw = document.getElementById('password').value;
+        if (pw === '123') { adminAuthenticated = true; closeModal(); renderAdmin(); }
+        else showToast('Senha incorreta!', 'error');
+      });
+    };
+
+    const showCustomConfirm = (msg, onConfirm) => {
+      const content = `
+        <div class="p-6">
+          <h3 class="text-lg font-bold mb-4">Confirmação Necessária</h3>
+          <p class="text-gray-700 mb-6">${msg}</p>
+          <div class="flex justify-end gap-3">
+            <button id="confirm-cancel" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Cancelar</button>
+            <button id="confirm-ok" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700">Confirmar</button>
+          </div>
+        </div>`;
+      showModal(content);
+      document.getElementById('confirm-ok').onclick = () => { closeModal(); onConfirm(); };
+      document.getElementById('confirm-cancel').onclick = closeModal;
+    };
+
+    const showToast = (message, type='success') => {
+      const toast = document.createElement('div');
+      toast.className = `fixed bottom-24 md:bottom-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg ${type==='error'?'bg-red-500':'bg-green-500'} z-50`;
+      toast.textContent = message; document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(), 2500);
+    };
+
+    // --- Relatórios ---
+    const generateReport = () => {
+      const getMulti = (id) => Array.from(document.getElementById(id).selectedOptions).map(o => o.value);
+      const modelosSel = getMulti('filter-modelo');
+      const gradesSel = getMulti('filter-grade');
+      const materiaisSel = getMulti('filter-material');
+
+      let rows = inventory.map(i => ({ ...i, product: productList.find(p => p.id === i.productId) }));
+      if (modelosSel.length) rows = rows.filter(r => modelosSel.includes(r.product.modelo));
+      if (gradesSel.length) rows = rows.filter(r => gradesSel.includes(r.product.grade));
+      if (materiaisSel.length) rows = rows.filter(r => materiaisSel.includes(r.product.material));
+
+      const result = document.getElementById('report-result');
+      if (!rows.length) {
+        result.innerHTML = `<p class="text-gray-600 mt-4">Nenhum item encontrado com os filtros selecionados.</p>`;
+        document.getElementById('print-report-btn').disabled = true;
+        document.getElementById('export-csv-btn').disabled = true;
+        return;
+      }
+
+      result.innerHTML = `
+        <div class="overflow-x-auto mt-4">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localização</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              ${rows.sort((a,b)=>a.product.nomeCompleto.localeCompare(b.product.nomeCompleto)).map(r=>`
+                <tr>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${r.product.nomeCompleto}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.locationId}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.quantity}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+      document.getElementById('print-report-btn').disabled = false;
+      document.getElementById('export-csv-btn').disabled = false;
+    };
+
+    // --- Navegação ---
+    const goTo = (hash) => { const cur = window.location.hash || '#home'; if (cur === hash) rerenderCurrentPage(); else window.location.hash = hash; };
+    const navigate = () => {
+      const hash = window.location.hash || '#home';
+      const pageId = `page-${hash.substring(1)}`;
+      pages.forEach(p => p.classList.toggle('hidden', p.id !== pageId));
+      menuItems.forEach(i => i.classList.toggle('active', i.getAttribute('href') === hash));
+      rerenderCurrentPage();
+    };
+    const rerenderCurrentPage = () => {
+      const hash = window.location.hash || '#home';
+      let title = 'Dashboard';
+      switch (hash) {
+        case '#home': renderDashboard(); break;
+        case '#entrada': title='Entrada'; renderEntrada(); break;
+        case '#saida': title='Saída'; renderSaida(); break;
+        case '#mapa': title='Mapa'; renderMap(); break;
+        case '#relatorios': title='Relatórios'; renderReports(); break;
+        case '#historico': title='Histórico'; renderHistory(); break;
+        case '#admin': title='Admin'; renderAdmin(); break;
+      }
+      const headerTitle = document.getElementById('header-title');
+      if (headerTitle) headerTitle.textContent = title;
+    };
+
+    (async () => {
+      await syncFromServer();
+      window.addEventListener('hashchange', navigate);
+      navigate();
+    })();
+  });
+  // PWA register
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+    });
+  }
+  </script>
+</body>
+</html>

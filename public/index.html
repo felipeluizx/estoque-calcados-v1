@@ -1,1065 +1,1157 @@
-Of course. Here is the completed and fully functional HTML file. I have implemented all the application logic within the `<script>` tag as requested, including navigation, page rendering for each section (Dashboard, Entry, Exit, Stock Map, Reports, History, and Admin), QR code scanning functionality, modal pop-ups, and data persistence simulation.
-
-```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Controle de Estoque - Indústria de Calçados</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.10/dist/html5-qrcode.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
-    .menu-item.active { background-color: #1d4ed8; color: white; }
-    .modal-backdrop { background-color: rgba(0,0,0,0.5); }
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #f1f1f1; }
-    ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #555; }
-    select:disabled, input:disabled { background-color: #e9ecef; cursor: not-allowed; }
-    .map-card-position { transition: all 0.2s ease-in-out; }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Controle de Estoque - Indústria de Calçados</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Scanner QR -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/dist/html5-qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
+    .menu-item.active { background-color: #1d4ed8; color: white; }
+    .modal-backdrop { background-color: rgba(0,0,0,0.5); }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+    select:disabled { background-color: #e9ecef; cursor: not-allowed; }
+    .map-card-position { transition: all 0.2s ease-in-out; }
+  </style>
 </head>
 <body class="antialiased text-gray-800">
 
-  <div id="app" class="flex flex-col md:flex-row min-h-screen">
-        <aside class="hidden md:flex flex-col w-64 bg-gray-800 text-white">
-      <div class="flex items-center justify-center h-16 border-b border-gray-700">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-boxes"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-        <span class="ml-2 text-lg font-bold">Estoque Calçados</span>
-      </div>
-      <nav class="flex-1 px-2 py-4 space-y-2">
-        <a href="#home" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard h-5 w-5 mr-3"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-          Dashboard
-        </a>
-        <a href="#entrada" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-square h-5 w-5 mr-3 text-green-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
-          Entrada
-        </a>
-        <a href="#saida" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-square h-5 w-5 mr-3 text-red-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>
-          Saída
-        </a>
-        <a href="#mapa" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map h-5 w-5 mr-3"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
-          Mapa do Estoque
-        </a>
-        <a href="#relatorios" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text h-5 w-5 mr-3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
-          Relatórios
-        </a>
-        <a href="#historico" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history h-5 w-5 mr-3"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-          Histórico
-        </a>
-        <a href="#admin" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check h-5 w-5 mr-3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
-          Admin
-        </a>
-      </nav>
-    </aside>
-
-        <div class="flex-1 flex flex-col">
-            <header class="md:hidden flex items-center justify-between bg-gray-800 text-white p-4 shadow-md sticky top-0 z-10">
-        <div class="flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-boxes"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-          <span id="header-title" class="ml-2 text-lg font-bold">Dashboard</span>
-        </div>
-                <a href="#admin" class="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600 text-white text-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
-          Admin
-        </a>
-      </header>
-
-      <main class="flex-1 p-4 md:p-8 overflow-y-auto">
-        <div id="page-home" class="page"></div>
-        <div id="page-entrada" class="page hidden"></div>
-        <div id="page-saida" class="page hidden"></div>
-        <div id="page-mapa" class="page hidden"></div>
-        <div id="page-relatorios" class="page hidden"></div>
-        <div id="page-historico" class="page hidden"></div>
-        <div id="page-admin" class="page hidden"></div>
-      </main>
-
-            <nav class="md:hidden grid grid-cols-5 gap-1 p-2 bg-gray-800 text-white border-t border-gray-700 sticky bottom-0">
-        <a href="#home" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard h-6 w-6 mb-1"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-          <span class="text-xs">Dashboard</span>
-        </a>
-        <a href="#entrada" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-square h-6 w-6 mb-1 text-green-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
-          <span class="text-xs">Entrada</span>
-        </a>
-        <a href="#saida" class="menu-item flex col flex-col items-center text-center p-2 rounded-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-square h-6 w-6 mb-1 text-red-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>
-          <span class="text-xs">Saída</span>
-        </a>
-        <a href="#mapa" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map h-6 w-6 mb-1"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
-          <span class="text-xs">Mapa</span>
-        </a>
-        <a href="#relatorios" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text h-6 w-6 mb-1"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
-          <span class="text-xs">Relatórios</span>
-        </a>
-      </nav>
-    </div>
-  </div>
-
-    <div id="modal-container" class="hidden"></div>
-
-  <script>
-  document.addEventListener('DOMContentLoaded', () => {
-
-    // --- DADOS DO SISTEMA ---
-    const productList = [
-      { id: 1, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE" },
-      { id: 2, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "BORDÔ" },
-      { id: 3, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
-      { id: 4, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
-      { id: 5, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "OFF PRETO" },
-      { id: 6, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "OFF VERDE" },
-      { id: 7, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO" },
-      { id: 8, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE" },
-      { id: 9, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
-      { id: 10, modelo: "BAD BUNNY", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 11, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE" },
-      { id: 12, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "BORDÔ" },
-      { id: 13, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
-      { id: 14, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
-      { id: 15, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF PRETO" },
-      { id: 16, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF VERDE" },
-      { id: 17, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO" },
-      { id: 18, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "ROSA" },
-      { id: 19, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE" },
-      { id: 20, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
-      { id: 21, modelo: "BAD BUNNY", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 22, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE BRANCO" },
-      { id: 23, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE CINZA" },
-      { id: 24, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BLACK" },
-      { id: 25, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
-      { id: 26, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
-      { id: 27, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
-      { id: 28, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA PRETO" },
-      { id: 29, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "LARANJA" },
-      { id: 30, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM BARATA" },
-      { id: 31, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM CREME" },
-      { id: 32, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
-      { id: 33, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO CINZA" },
-      { id: 34, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO COSTURA BRANCO" },
-      { id: 35, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE MUSGO" },
-      { id: 36, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
-      { id: 37, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 38, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 39, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
-      { id: 40, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE BRANCO" },
-      { id: 41, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE CINZA" },
-      { id: 42, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BLACK" },
-      { id: 43, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
-      { id: 44, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
-      { id: 45, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
-      { id: 46, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA PRETO" },
-      { id: 47, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "LARANJA" },
-      { id: 48, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM BARATA" },
-      { id: 49, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM CREME" },
-      { id: 50, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
-      { id: 51, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO CINZA" },
-      { id: 52, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO COSTURA BRANCO" },
-      { id: 53, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE MUSGO" },
-      { id: 54, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
-      { id: 55, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 56, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 57, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
-      { id: 58, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "AZUL" },
-      { id: 59, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "BORDÔ" },
-      { id: 60, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "BRANCO VERDE" },
-      { id: 61, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
-      { id: 62, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
-      { id: 63, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
-      { id: 64, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM" },
-      { id: 65, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "MOSTARDA" },
-      { id: 66, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "OFF PRETO" },
-      { id: 67, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO" },
-      { id: 68, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO PRETO" },
-      { id: 69, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
-      { id: 70, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
-      { id: 71, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "GRAFITE" },
-      { id: 72, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO BEGE" },
-      { id: 73, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO PRETO" },
-      { id: 74, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 75, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 76, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
-      { id: 77, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "AZUL" },
-      { id: 78, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BORDÔ" },
-      { id: 79, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BRANCO VERDE" },
-      { id: 80, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
-      { id: 81, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
-      { id: 82, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
-      { id: 83, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "GRAFITE" },
-      { id: 84, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "LARANJA" },
-      { id: 85, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM" },
-      { id: 86, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MOSTARDA" },
-      { id: 87, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF PRETO" },
-      { id: 88, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO" },
-      { id: 89, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO PRETO" },
-      { id: 90, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "ROSA" },
-      { id: 91, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "SALMÃO" },
-      { id: 92, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
-      { id: 93, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE ÁGUA" },
-      { id: 94, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
-      { id: 95, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "CAMURÇA OFF AZUL" },
-      { id: 96, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "CAMURÇA OFF ROSA" },
-      { id: 97, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "SINTÉTICO BRANCO AZUL" },
-      { id: 98, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "SINTÉTICO BRANCO ROSA" },
-      { id: 99, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "GRAFITE" },
-      { id: 100, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "PRETO BEGE" },
-      { id: 101, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "PRETO PRETO BEGE" },
-      { id: 102, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BOBBIE GOODS" },
-      { id: 103, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 104, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 105, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
-      { id: 106, modelo: "CAMPUS", grade: "INFANTIL", material: "BOBBIE GOODS", variacao: "BOBBIE GOODS" },
-      { id: 107, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "AZUL" },
-      { id: 108, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "BORDÔ" },
-      { id: 109, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "BRANCO VERDE" },
-      { id: 110, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CHUMBO" },
-      { id: 111, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CINZA CROMIO" },
-      { id: 112, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CINZA" },
-      { id: 113, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "OFF PRETO" },
-      { id: 114, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO" },
-      { id: 115, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO PRETO" },
-      { id: 116, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "ROSA" },
-      { id: 117, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
-      { id: 118, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "VERMELHO" },
-      { id: 119, modelo: "CAMPUS", grade: "INFANTIL", material: "CETIM", variacao: "OFF AZUL" },
-      { id: 120, modelo: "CAMPUS", grade: "INFANTIL", material: "CETIM", variacao: "OFF ROSA" },
-      { id: 121, modelo: "CAMPUS", grade: "INFANTIL", material: "MESSI", variacao: "MESSI" },
-      { id: 122, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 123, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 124, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "PRETO" },
-      { id: 125, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 126, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 127, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
-      { id: 128, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
-      { id: 129, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 130, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 131, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
-      { id: 132, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
-      { id: 133, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "AZUL" },
-      { id: 134, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO CINZA" },
-      { id: 135, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 136, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "CHUMBO" },
-      { id: 137, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "OFF MARROM" },
-      { id: 138, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "ONÇA" },
-      { id: 139, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
-      { id: 140, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
-      { id: 141, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "ROSA" },
-      { id: 142, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "AZUL" },
-      { id: 143, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "BEGE" },
-      { id: 144, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 145, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "CINZA BRANCO" },
-      { id: 146, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
-      { id: 147, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO CINZA" },
-      { id: 148, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO PRETO" },
-      { id: 149, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "AZUL" },
-      { id: 150, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BEGE" },
-      { id: 151, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 152, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "CINZA BRANCO" },
-      { id: 153, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
-      { id: 154, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO CINZA" },
-      { id: 155, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO PRETO" },
-      { id: 156, modelo: "XL SUEDE", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
-      { id: 157, modelo: "XL SUEDE", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO PRETO" },
-      { id: 158, modelo: "XL SUEDE", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 159, modelo: "XL SUEDE", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 160, modelo: "XL SUEDE", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
-      { id: 161, modelo: "XL SUEDE", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO PRETO" },
-      { id: 162, modelo: "XL SUEDE", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 163, modelo: "XL SUEDE", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 164, modelo: "XL SUEDE", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO BRANCO" },
-      { id: 165, modelo: "XL SUEDE", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO PRETO" },
-      { id: 166, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
-    ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
-
-    // Inventário e histórico (carregado via localStorage para persistência no navegador)
-    let inventory = [];
-    let history = [];
-
-    function loadFromLocalStorage() {
-      try {
-        const savedInventory = localStorage.getItem('shoeInventory');
-        const savedHistory = localStorage.getItem('shoeHistory');
-        if (savedInventory) inventory = JSON.parse(savedInventory);
-        if (savedHistory) history = JSON.parse(savedHistory);
-      } catch (err) {
-        console.error("Falha ao carregar do LocalStorage", err);
-        inventory = [];
-        history = [];
-      }
-    }
-
-    function persist() {
-      try {
-        localStorage.setItem('shoeInventory', JSON.stringify(inventory));
-        localStorage.setItem('shoeHistory', JSON.stringify(history));
-      } catch (err) {
-        console.error("Falha ao salvar no LocalStorage", err);
-      }
-    }
-
-    const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
-    const adminPassword = '123';
-    let adminAuthenticated = false;
-
-    const pages = document.querySelectorAll('.page');
-    const menuItems = document.querySelectorAll('.menu-item');
-    const headerTitle = document.getElementById('header-title');
-    const modalContainer = document.getElementById('modal-container');
-
-    // --- FILTROS DO MAPA ---
-    let mapFilters = { modelo: '', grade: '', variacao: '' };
-    const clearMapFilters = () => { mapFilters = { modelo: '', grade: '', variacao: '' }; };
-    const matchesMapFilter = (product) => {
-      if (!product) return false;
-      if (mapFilters.modelo && product.modelo !== mapFilters.modelo) return false;
-      if (mapFilters.grade && product.grade !== mapFilters.grade) return false;
-      if (mapFilters.variacao && product.variacao !== mapFilters.variacao) return false;
-      return true;
-    };
-
-    // ======= SCANNER / QR (com bip + delay) =======
-    let preselectedLocation = null;
-
-    function beep() {
-      try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'square';
-        osc.frequency.value = 880;
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.12);
-      } catch (_) {}
-    }
-
-    function parseScannedPayload(text) {
-      try {
-        const j = JSON.parse(text);
-        return {
-          productId: j.productId ?? null,
-          quantity: Number(j.quantity) || 0,
-          modelo: j.modelo || null,
-          grade: j.grade || null,
-          material: j.material || null,
-          variacao: j.variacao || null
-        };
-      } catch(_) {
-        if (text.includes('|')) {
-          const [pid, qty] = text.split('|');
-          return { productId: Number(pid) || null, quantity: Number(qty) || 0 };
-        }
-        if (text.includes(';')) {
-          const [modelo, grade, material, variacao, qty] = text.split(';').map(s=>s.trim());
-          return { productId: null, quantity: Number(qty)||0, modelo, grade, material, variacao };
-        }
-        const n = Number(text.trim());
-        if (!Number.isNaN(n)) return { productId: n, quantity: 0 };
-        return { productId: null, quantity: 0 };
-      }
-    }
-
-    function findProductFromScan(payload) {
-      if (payload.productId) {
-        return productList.find(p => p.id === payload.productId) || null;
-      }
-      if (payload.modelo && payload.grade && payload.material && payload.variacao) {
-        return productList.find(p =>
-          p.modelo === payload.modelo &&
-          p.grade === payload.grade &&
-          p.material === payload.material &&
-          p.variacao === payload.variacao
-        ) || null;
-      }
-      return null;
-    }
-
-    function showScanModal(onSuccess) {
-      const content = `
-        <div class="p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-bold">Ler código</h3>
-            <button class="text-gray-400 hover:text-gray-600" id="scan-close">✕</button>
-          </div>
-          <div id="reader" style="width:100%"></div>
-          <div id="scan-feedback" class="hidden mt-3 px-3 py-2 rounded-md bg-green-100 text-green-800 text-sm font-medium">Código lido! Processando...</div>
-          <p class="text-xs text-gray-500 mt-3">Se solicitado, permita o acesso à câmera. Suporta QR (e códigos gerados pelo sistema).</p>
-        </div>`;
-      showModal(content);
-
-      const reader = new Html5Qrcode("reader");
-      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-
-      let handled = false;
-      function cleanup() {
-        reader.stop().catch(()=>{}).finally(()=>reader.clear().catch(()=>{}));
-        closeModal();
-      }
-      document.getElementById('scan-close').onclick = cleanup;
-
-      reader.start(
-        { facingMode: "environment" },
-        config,
-        decodedText => {
-          if (handled) return;
-          handled = true;
-          document.getElementById('scan-feedback')?.classList.remove('hidden');
-          beep();
-
-          setTimeout(() => {
-            const payload = parseScannedPayload(decodedText);
-            const product = findProductFromScan(payload);
-            if (onSuccess) {
-                onSuccess(product, payload.quantity);
-            }
-            cleanup();
-          }, 1500); // 1.5s delay
-        },
-        errorMessage => { /* ignore */ }
-      ).catch(err => {
-        document.getElementById('reader').innerHTML = `<p class="text-red-600 text-center">Erro ao iniciar a câmera: ${err}</p>`;
-      });
-    }
-
-    // ======= SISTEMA DE MODAL =======
-    function showModal(content, size = 'md') {
-      const sizeClasses = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-lg', xl: 'max-w-xl' };
-      modalContainer.innerHTML = `
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
-          <div id="modal-content" class="bg-white rounded-lg shadow-xl w-full ${sizeClasses[size] || sizeClasses['md']}">
-            ${content}
-          </div>
-        </div>`;
-      modalContainer.classList.remove('hidden');
-      const backdrop = modalContainer.querySelector('.modal-backdrop');
-      if (backdrop) {
-        backdrop.addEventListener('click', (e) => {
-          if (e.target === e.currentTarget) closeModal();
-        });
-      }
-    }
-
-    function closeModal() {
-      modalContainer.classList.add('hidden');
-      modalContainer.innerHTML = '';
-    }
-
-    // ======= HELPERS =======
-    const getProductById = (id) => productList.find(p => p.id === id);
-    const generateLocationId = (loc, pos) => `${loc}-${pos}`;
-    const parseLocationId = (id) => ({ location: id.split('-')[0], position: id.split('-')[1] });
-    const getQuantityAtLocation = (productId, locationId) => {
-      const item = inventory.find(i => i.productId === productId && i.locationId === locationId);
-      return item ? item.quantity : 0;
-    };
-
-    // ======= RENDERIZAÇÃO DAS PÁGINAS =======
-
-    function renderHome() {
-      const totalItems = inventory.reduce((sum, item) => sum + item.quantity, 0);
-      const uniqueProducts = [...new Set(inventory.map(item => item.productId))].length;
-      const recentHistory = history.slice(-5).reverse();
-
-      document.getElementById('page-home').innerHTML = `
-        <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-gray-500 text-sm font-medium">Total de Itens em Estoque</h2>
-            <p class="text-3xl font-bold mt-2">${totalItems.toLocaleString('pt-BR')}</p>
-          </div>
-          <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-gray-500 text-sm font-medium">Produtos Únicos</h2>
-            <p class="text-3xl font-bold mt-2">${uniqueProducts.toLocaleString('pt-BR')}</p>
-          </div>
-          <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-gray-500 text-sm font-medium">Movimentações</h2>
-            <p class="text-3xl font-bold mt-2">${history.length.toLocaleString('pt-BR')}</p>
-          </div>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow-md">
-          <h2 class="text-xl font-bold mb-4">Atividade Recente</h2>
-          <div class="divide-y divide-gray-200">
-            ${recentHistory.length === 0 ? '<p class="text-gray-500">Nenhuma atividade registrada.</p>' :
-              recentHistory.map(item => `
-                <div class="py-3 flex justify-between items-center">
-                  <div>
-                    <p class="font-medium">${getProductById(item.productId)?.nomeCompleto || 'Produto desconhecido'}</p>
-                    <p class="text-sm text-gray-500">Local: ${item.locationId} | ${new Date(item.timestamp).toLocaleString('pt-BR')}</p>
-                  </div>
-                  <div class="text-right">
-                    <span class="font-bold text-${item.type === 'entrada' ? 'green' : 'red'}-600">
-                      ${item.type === 'entrada' ? '+' : '-'}${item.quantity}
-                    </span>
-                  </div>
-                </div>
-              `).join('')
-            }
-          </div>
-        </div>
-      `;
-    }
-
-    function renderTransactionPage(type) {
-      const isEntry = type === 'entrada';
-      const pageId = `page-${type}`;
-      const targetPage = document.getElementById(pageId);
-      const title = isEntry ? 'Registrar Entrada' : 'Registrar Saída';
-      const buttonText = isEntry ? 'Dar Entrada' : 'Dar Saída';
-      const buttonColor = isEntry ? 'bg-blue-600 hover:bg-blue-700' : 'bg-red-600 hover:bg-red-700';
-
-      targetPage.innerHTML = `
-        <div class="max-w-xl mx-auto">
-          <h1 class="text-3xl font-bold mb-6">${title}</h1>
-          <div class="bg-white p-8 rounded-lg shadow-md">
-            <form id="transaction-form" class="space-y-6">
-              <div id="feedback-message" class="hidden p-3 rounded-md"></div>
-              
-                            <div>
-                <label for="product" class="block text-sm font-medium text-gray-700">Produto</label>
-                <div class="mt-1 flex gap-2">
-                  <select id="product" name="product" required class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Selecione um produto...</option>
-                    ${productList.map(p => `<option value="${p.id}">${p.nomeCompleto}</option>`).join('')}
-                  </select>
-                  <button type="button" id="scan-btn" class="flex-shrink-0 px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-line"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
-                  </button>
-                </div>
-              </div>
-              
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label for="location" class="block text-sm font-medium text-gray-700">Local (Rua)</label>
-                  <select id="location" name="location" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    ${mapLayout.locations.map(l => `<option value="${l}">${l}</option>`).join('')}
-                  </select>
-                </div>
-                <div>
-                  <label for="position" class="block text-sm font-medium text-gray-700">Posição</label>
-                  <select id="position" name="position" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    ${mapLayout.positions.map(p => `<option value="${p}">${p}</option>`).join('')}
-                  </select>
-                </div>
-              </div>
-
-                            <div>
-                <label for="quantity" class="block text-sm font-medium text-gray-700">Quantidade</label>
-                <input type="number" id="quantity" name="quantity" min="1" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                <p id="available-qty-msg" class="text-xs text-gray-500 mt-1"></p>
-              </div>
-              
-              <div>
-                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${buttonColor} focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                  ${buttonText}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      `;
-
-      const form = targetPage.querySelector('#transaction-form');
-      const productSelect = form.querySelector('#product');
-      const locationSelect = form.querySelector('#location');
-      const positionSelect = form.querySelector('#position');
-      const quantityInput = form.querySelector('#quantity');
-      const availableQtyMsg = form.querySelector('#available-qty-msg');
-
-      // Pre-select location if coming from map
-      if (preselectedLocation) {
-        locationSelect.value = preselectedLocation.location;
-        positionSelect.value = preselectedLocation.position;
-      }
-
-      // Update available quantity message for Saída
-      const updateAvailableQty = () => {
-        if (isEntry) return;
-        const productId = parseInt(productSelect.value, 10);
-        const locationId = generateLocationId(locationSelect.value, positionSelect.value);
-        if (productId && locationId) {
-          const qty = getQuantityAtLocation(productId, locationId);
-          availableQtyMsg.textContent = `Disponível neste local: ${qty}`;
-          quantityInput.max = qty;
-        } else {
-          availableQtyMsg.textContent = '';
-        }
-      };
-
-      productSelect.onchange = updateAvailableQty;
-      locationSelect.onchange = updateAvailableQty;
-      positionSelect.onchange = updateAvailableQty;
-
-      // Handle Scan
-      targetPage.querySelector('#scan-btn').onclick = () => {
-        showScanModal((product, quantity) => {
-          if (product) productSelect.value = product.id;
-          if (quantity > 0) quantityInput.value = quantity;
-          updateAvailableQty();
-        });
-      };
-
-      // Handle form submission
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        const feedback = form.querySelector('#feedback-message');
-        const productId = parseInt(productSelect.value, 10);
-        const quantity = parseInt(quantityInput.value, 10);
-        const locationId = generateLocationId(locationSelect.value, positionSelect.value);
-
-        if (isNaN(productId) || isNaN(quantity) || quantity <= 0) {
-          feedback.textContent = 'Por favor, preencha todos os campos corretamente.';
-          feedback.className = 'p-3 rounded-md bg-red-100 text-red-800';
-          feedback.classList.remove('hidden');
-          return;
-        }
-
-        const inventoryIndex = inventory.findIndex(i => i.productId === productId && i.locationId === locationId);
-
-        if (isEntry) {
-          if (inventoryIndex > -1) {
-            inventory[inventoryIndex].quantity += quantity;
-          } else {
-            inventory.push({ productId, locationId, quantity });
-          }
-        } else { // Saída
-          if (inventoryIndex === -1 || inventory[inventoryIndex].quantity < quantity) {
-            feedback.textContent = 'Quantidade insuficiente no local selecionado.';
-            feedback.className = 'p-3 rounded-md bg-red-100 text-red-800';
-            feedback.classList.remove('hidden');
-            return;
-          }
-          inventory[inventoryIndex].quantity -= quantity;
-          if (inventory[inventoryIndex].quantity === 0) {
-            inventory.splice(inventoryIndex, 1); // Remove item if quantity is zero
-          }
-        }
-
-        history.push({
-          type,
-          productId,
-          quantity,
-          locationId,
-          timestamp: new Date().toISOString()
-        });
-
-        persist();
-        feedback.textContent = `Operação de ${type} realizada com sucesso!`;
-        feedback.className = 'p-3 rounded-md bg-green-100 text-green-800';
-        feedback.classList.remove('hidden');
-        form.reset();
-        if(preselectedLocation) { // Re-populate location if it was pre-selected
-          locationSelect.value = preselectedLocation.location;
-          positionSelect.value = preselectedLocation.position;
-        }
-        updateAvailableQty();
-        setTimeout(() => feedback.classList.add('hidden'), 4000);
-      };
-    }
-
-    const renderEntrada = () => renderTransactionPage('entrada');
-    const renderSaida = () => renderTransactionPage('saida');
-
-    function renderMapa() {
-      const page = document.getElementById('page-mapa');
-      const uniqueModels = [...new Set(productList.map(p => p.modelo))].sort();
-      const uniqueGrades = [...new Set(productList.map(p => p.grade))].sort();
-      const uniqueVariations = [...new Set(productList.map(p => p.variacao))].sort();
-
-      page.innerHTML = `
-        <h1 class="text-3xl font-bold mb-6">Mapa do Estoque</h1>
-                <div class="bg-white p-4 rounded-lg shadow-md mb-6 flex flex-wrap gap-4 items-end">
-          <div>
-            <label for="filter-modelo" class="text-sm font-medium text-gray-700">Modelo</label>
-            <select id="filter-modelo" class="mt-1 block w-full md:w-48 border-gray-300 rounded-md shadow-sm text-sm">
-              <option value="">Todos</option>
-              ${uniqueModels.map(m => `<option value="${m}" ${mapFilters.modelo === m ? 'selected' : ''}>${m}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label for="filter-grade" class="text-sm font-medium text-gray-700">Grade</label>
-            <select id="filter-grade" class="mt-1 block w-full md:w-32 border-gray-300 rounded-md shadow-sm text-sm">
-              <option value="">Todas</option>
-              ${uniqueGrades.map(g => `<option value="${g}" ${mapFilters.grade === g ? 'selected' : ''}>${g}</option>`).join('')}
-            </select>
-          </div>
-          <div>
-            <label for="filter-variacao" class="text-sm font-medium text-gray-700">Variação</label>
-            <select id="filter-variacao" class="mt-1 block w-full md:w-48 border-gray-300 rounded-md shadow-sm text-sm">
-              <option value="">Todas</option>
-              ${uniqueVariations.map(v => `<option value="${v}" ${mapFilters.variacao === v ? 'selected' : ''}>${v}</option>`).join('')}
-            </select>
-          </div>
-          <button id="clear-filters-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm">Limpar</button>
-        </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
-          ${mapLayout.locations.map(loc => `
-            <div class="bg-gray-200 rounded-lg p-3 flex flex-col gap-3 shadow">
-              <div class="text-center font-bold text-lg text-gray-700 border-b-2 border-gray-400 pb-2">RUA ${loc}</div>
-              ${mapLayout.positions.map(pos => {
-                const locationId = generateLocationId(loc, pos);
-                const itemsInLocation = inventory.filter(i => i.locationId === locationId);
-                const filteredItems = itemsInLocation.filter(i => matchesMapFilter(getProductById(i.productId)));
-                const totalQty = itemsInLocation.reduce((sum, i) => sum + i.quantity, 0);
-                const hasFilteredItem = filteredItems.length > 0;
-                const isActiveFilter = mapFilters.modelo || mapFilters.grade || mapFilters.variacao;
-                const cardClass = totalQty === 0 ? 'bg-white' : (isActiveFilter ? (hasFilteredItem ? 'bg-yellow-200 ring-2 ring-yellow-500' : 'bg-white opacity-60') : 'bg-blue-100');
-
-                return `
-                <div id="map-card-${locationId}" data-location="${loc}" data-position="${pos}" class="map-card-position p-3 rounded-md shadow-sm cursor-pointer hover:shadow-lg ${cardClass}">
-                  <div class="flex justify-between items-center">
-                    <h4 class="font-bold text-gray-800">${pos}</h4>
-                    <span class="text-sm font-semibold px-2 py-0.5 rounded-full ${totalQty > 0 ? 'bg-gray-800 text-white' : 'bg-gray-300 text-gray-600'}">${totalQty}</span>
-                  </div>
-                  ${hasFilteredItem ? `<p class="text-xs mt-1 text-yellow-800 font-medium">Contém item filtrado</p>` : ''}
-                </div>`;
-              }).join('')}
-            </div>`).join('')}
-        </div>
-      `;
-      
-      // Add filter event listeners
-      const applyFilters = () => {
-        mapFilters.modelo = page.querySelector('#filter-modelo').value;
-        mapFilters.grade = page.querySelector('#filter-grade').value;
-        mapFilters.variacao = page.querySelector('#filter-variacao').value;
-        renderMapa();
-      };
-      page.querySelector('#filter-modelo').onchange = applyFilters;
-      page.querySelector('#filter-grade').onchange = applyFilters;
-      page.querySelector('#filter-variacao').onchange = applyFilters;
-      page.querySelector('#clear-filters-btn').onclick = () => {
-        clearMapFilters();
-        renderMapa();
-      };
-
-      // Add card click listener
-      page.querySelectorAll('.map-card-position').forEach(card => {
-        card.onclick = () => {
-          const location = card.dataset.location;
-          const position = card.dataset.position;
-          const locationId = generateLocationId(location, position);
-          const itemsInLocation = inventory.filter(i => i.locationId === locationId);
-
-          const modalContent = `
-            <div class="p-5">
-              <div class="flex justify-between items-start mb-4">
-                <div>
-                  <h3 class="text-xl font-bold">Local: ${locationId}</h3>
-                  <p class="text-gray-500">Itens neste local</p>
-                </div>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">✕</button>
-              </div>
-              <div class="max-h-80 overflow-y-auto pr-2">
-                ${itemsInLocation.length > 0 ? itemsInLocation.map(item => `
-                  <div class="flex justify-between items-center py-2 border-b">
-                    <p class="text-sm">${getProductById(item.productId)?.nomeCompleto}</p>
-                    <p class="font-bold">${item.quantity}</p>
-                  </div>
-                `).join('') : '<p class="text-center text-gray-500 py-4">Este local está vazio.</p>'}
-              </div>
-              <div class="flex gap-3 mt-5">
-                <button id="modal-add-btn" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm">Adicionar</button>
-                <button id="modal-remove-btn" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 text-sm ${itemsInLocation.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}" ${itemsInLocation.length === 0 ? 'disabled' : ''}>Remover</button>
-              </div>
-            </div>
-          `;
-          showModal(modalContent, 'lg');
-          
-          document.getElementById('modal-add-btn').onclick = () => {
-            preselectedLocation = { location, position };
-            closeModal();
-            window.location.hash = '#entrada';
-          };
-          document.getElementById('modal-remove-btn').onclick = () => {
-            preselectedLocation = { location, position };
-            closeModal();
-            window.location.hash = '#saida';
-          };
-        };
-      });
-    }
-
-    function renderRelatorios() {
-      const page = document.getElementById('page-relatorios');
-      page.innerHTML = `
-        <h1 class="text-3xl font-bold mb-6">Relatórios</h1>
-        <div class="space-y-4 max-w-md">
-          <div class="bg-white p-5 rounded-lg shadow-md flex justify-between items-center">
-            <div>
-              <h2 class="font-bold">Estoque por Produto</h2>
-              <p class="text-sm text-gray-500">Total de cada produto em todos os locais.</p>
-            </div>
-            <button id="report-by-product" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">Gerar CSV</button>
-          </div>
-          <div class="bg-white p-5 rounded-lg shadow-md flex justify-between items-center">
-            <div>
-              <h2 class="font-bold">Estoque por Local</h2>
-              <p class="text-sm text-gray-500">Lista de todos os produtos por cada local.</p>
-            </div>
-            <button id="report-by-location" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm">Gerar CSV</button>
-          </div>
-        </div>`;
-
-      const downloadCSV = (filename, csvContent) => {
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      };
-
-      page.querySelector('#report-by-product').onclick = () => {
-        const headers = "ID do Produto,Modelo,Grade,Material,Variacao,Quantidade Total";
-        const stockByProduct = inventory.reduce((acc, item) => {
-          acc[item.productId] = (acc[item.productId] || 0) + item.quantity;
-          return acc;
-        }, {});
-        
-        const rows = Object.entries(stockByProduct).map(([productId, quantity]) => {
-          const product = getProductById(parseInt(productId, 10));
-          return [
-            product.id, `"${product.modelo}"`, `"${product.grade}"`, `"${product.material}"`, `"${product.variacao}"`, quantity
-          ].join(',');
-        });
-        downloadCSV('estoque_por_produto.csv', [headers, ...rows].join('\n'));
-      };
-      
-      page.querySelector('#report-by-location').onclick = () => {
-        const headers = "Local,ID do Produto,Modelo,Grade,Material,Variacao,Quantidade";
-        const rows = inventory.map(item => {
-          const product = getProductById(item.productId);
-          return [
-            `"${item.locationId}"`, product.id, `"${product.modelo}"`, `"${product.grade}"`, `"${product.material}"`, `"${product.variacao}"`, item.quantity
-          ].join(',');
-        });
-        downloadCSV('estoque_por_local.csv', [headers, ...rows].join('\n'));
-      };
-    }
-
-    function renderHistorico() {
-      const page = document.getElementById('page-historico');
-      const sortedHistory = [...history].reverse();
-      page.innerHTML = `
-        <h1 class="text-3xl font-bold mb-6">Histórico de Movimentações</h1>
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm text-left text-gray-500">
-              <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                  <th scope="col" class="px-6 py-3">Data/Hora</th>
-                  <th scope="col" class="px-6 py-3">Tipo</th>
-                  <th scope="col" class="px-6 py-3">Produto</th>
-                  <th scope="col" class="px-6 py-3">Qtd.</th>
-                  <th scope="col" class="px-6 py-3">Local</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${sortedHistory.length > 0 ? sortedHistory.map(item => `
-                  <tr class="bg-white border-b hover:bg-gray-50">
-                    <td class="px-6 py-4">${new Date(item.timestamp).toLocaleString('pt-BR')}</td>
-                    <td class="px-6 py-4">
-                      <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.type === 'entrada' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                        ${item.type}
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 font-medium text-gray-900">${getProductById(item.productId)?.nomeCompleto || 'N/A'}</td>
-                    <td class="px-6 py-4">${item.quantity}</td>
-                    <td class="px-6 py-4">${item.locationId}</td>
-                  </tr>
-                `).join('') : `<tr><td colspan="5" class="text-center py-10">Nenhum histórico encontrado.</td></tr>`}
-              </tbody>
-              </table>
-          </div>
-        </div>
-      `;
-    }
-
-    function renderAdmin() {
-      const page = document.getElementById('page-admin');
-      if (!adminAuthenticated) {
-        page.innerHTML = `
-          <div class="max-w-sm mx-auto mt-10">
-            <div class="bg-white p-8 rounded-lg shadow-md">
-              <h1 class="text-2xl font-bold mb-4 text-center">Acesso Admin</h1>
-              <form id="admin-login-form">
-                <label for="password" class="block text-sm font-medium text-gray-700">Senha</label>
-                <input type="password" id="password" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
-                <p id="admin-error" class="text-red-600 text-sm mt-1 h-4"></p>
-                <button type="submit" class="mt-4 w-full bg-gray-800 text-white py-2 rounded-md hover:bg-gray-700">Entrar</button>
-              </form>
-            </div>
-          </div>`;
-        page.querySelector('#admin-login-form').onsubmit = (e) => {
-          e.preventDefault();
-          const pass = page.querySelector('#password').value;
-          if (pass === adminPassword) {
-            adminAuthenticated = true;
-            renderAdmin();
-          } else {
-            page.querySelector('#admin-error').textContent = 'Senha incorreta.';
-          }
-        };
-        return;
-      }
-
-      // If authenticated:
-      page.innerHTML = `
-        <h1 class="text-3xl font-bold mb-6">Painel Administrativo</h1>
-        <div class="space-y-6 max-w-2xl">
-                    <div class="bg-white p-5 rounded-lg shadow-md">
-            <h2 class="font-bold text-lg mb-4">Gerenciamento de Dados</h2>
-            <div class="flex flex-wrap gap-4">
-              <button id="export-data" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Exportar Dados (JSON)</button>
-              <button onclick="document.getElementById('import-file').click()" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Importar Dados (JSON)</button>
-              <input type="file" id="import-file" class="hidden" accept=".json">
-            </div>
-          </div>
-                    <div class="bg-red-50 border-l-4 border-red-500 p-5 rounded-lg shadow-md">
-            <h2 class="font-bold text-lg text-red-800 mb-4">Zona de Perigo</h2>
-            <div class="flex flex-wrap gap-4">
-              <button id="clear-inventory" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-800">Limpar Inventário</button>
-              <button id="clear-history" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-800">Limpar Histórico</button>
-            </div>
-          </div>
-        </div>`;
-
-      page.querySelector('#export-data').onclick = () => {
-        const dataStr = JSON.stringify({ inventory, history }, null, 2);
-        const blob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `backup_estoque_${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-      };
-
-      page.querySelector('#import-file').onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          try {
-            const data = JSON.parse(event.target.result);
-            if (Array.isArray(data.inventory) && Array.isArray(data.history)) {
-              if (confirm("Tem certeza que deseja substituir todos os dados atuais por este arquivo de backup?")) {
-                inventory = data.inventory;
-                history = data.history;
-                persist();
-                alert("Dados importados com sucesso!");
-                navigateTo('#home');
-              }
-            } else {
-              alert('Arquivo de backup inválido.');
-            }
-          } catch (err) {
-            alert('Erro ao ler o arquivo JSON.');
-          }
-        };
-        reader.readAsText(file);
-      };
-
-      page.querySelector('#clear-inventory').onclick = () => {
-        if (confirm("ATENÇÃO: Isso apagará TODOS os itens do inventário. Deseja continuar?")) {
-          inventory = [];
-          persist();
-          alert('Inventário limpo.');
-        }
-      };
-      
-      page.querySelector('#clear-history').onclick = () => {
-        if (confirm("ATENÇÃO: Isso apagará TODO o histórico de movimentações. Deseja continuar?")) {
-          history = [];
-          persist();
-          alert('Histórico limpo.');
-        }
-      };
-    }
-
-    // ======= NAVEGAÇÃO =======
-    function navigateTo(hash) {
-      hash = hash || '#home';
-      if (!hash.startsWith('#')) hash = '#home';
-
-      pages.forEach(p => p.classList.add('hidden'));
-      menuItems.forEach(i => i.classList.remove('active'));
-
-      const pageName = hash.substring(1);
-      const pageId = `page-${pageName}`;
-      const targetPage = document.getElementById(pageId);
-      
-      if (targetPage) {
-        targetPage.classList.remove('hidden');
-        
-        if (pageName !== 'entrada' && pageName !== 'saida') preselectedLocation = null;
-        if (pageName !== 'mapa') clearMapFilters();
-
-        switch (pageName) {
-          case 'home': renderHome(); break;
-          case 'entrada': renderEntrada(); break;
-          case 'saida': renderSaida(); break;
-          case 'mapa': renderMapa(); break;
-          case 'relatorios': renderRelatorios(); break;
-          case 'historico': renderHistorico(); break;
-          case 'admin': renderAdmin(); break;
-        }
-
-        const activeMenuItems = document.querySelectorAll(`.menu-item[href="${hash}"]`);
-        activeMenuItems.forEach(item => item.classList.add('active'));
-        if (activeMenuItems.length > 0) {
-          headerTitle.textContent = activeMenuItems[0].textContent.trim();
-        }
-      } else {
-        navigateTo('#home');
-      }
-    }
-
-    // ======= INICIALIZAÇÃO =======
-    function init() {
-      loadFromLocalStorage(); // Usando localStorage em vez do servidor simulado
-      navigateTo(window.location.hash);
-      window.addEventListener('hashchange', () => navigateTo(window.location.hash));
-
-      // Delegação de eventos para os links de navegação para um melhor controle
-      document.body.addEventListener('click', e => {
-          const menuItem = e.target.closest('a.menu-item');
-          if (menuItem) {
-             const hash = new URL(menuItem.href).hash;
-             if (hash !== window.location.hash) {
-               window.location.hash = hash;
-             } else { // se já estiver na página, força a re-renderização
-               navigateTo(hash);
-             }
-          }
-      });
-    }
-
-    init();
-  });
-  </script>
-
+  <div id="app" class="flex flex-col md:flex-row min-h-screen">
+    <!-- Sidebar (desktop) -->
+    <aside class="hidden md:flex flex-col w-64 bg-gray-800 text-white">
+      <div class="flex items-center justify-center h-16 border-b border-gray-700">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-boxes"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span class="ml-2 text-lg font-bold">Estoque Calçados</span>
+      </div>
+      <nav class="flex-1 px-2 py-4 space-y-2">
+        <a href="#home" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard h-5 w-5 mr-3"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="#entrada" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-square h-5 w-5 mr-3 text-green-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
+          Entrada
+        </a>
+        <a href="#saida" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-square h-5 w-5 mr-3 text-red-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>
+          Saída
+        </a>
+        <a href="#mapa" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map h-5 w-5 mr-3"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+          Mapa do Estoque
+        </a>
+        <a href="#relatorios" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text h-5 w-5 mr-3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+          Relatórios
+        </a>
+        <a href="#historico" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history h-5 w-5 mr-3"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Histórico
+        </a>
+        <a href="#admin" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check h-5 w-5 mr-3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+          Admin
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 flex flex-col">
+      <!-- Mobile Header -->
+      <header class="md:hidden flex items-center justify-between bg-gray-800 text-white p-4 shadow-md sticky top-0 z-10">
+        <div class="flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-boxes"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+          <span id="header-title" class="ml-2 text-lg font-bold">Dashboard</span>
+        </div>
+        <!-- Botão Admin no topo direito (mobile) -->
+        <a href="#admin" class="inline-flex items-center gap-1 px-3 py-1 rounded-md bg-gray-700 hover:bg-gray-600 text-white text-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+          Admin
+        </a>
+      </header>
+
+      <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div id="page-home" class="page"></div>
+        <div id="page-entrada" class="page hidden"></div>
+        <div id="page-saida" class="page hidden"></div>
+        <div id="page-mapa" class="page hidden"></div>
+        <div id="page-relatorios" class="page hidden"></div>
+        <div id="page-historico" class="page hidden"></div>
+        <div id="page-admin" class="page hidden"></div>
+      </main>
+
+      <!-- Bottom Nav (mobile) - agora com RELATÓRIOS e sem Admin -->
+      <nav class="md:hidden grid grid-cols-5 gap-1 p-2 bg-gray-800 text-white border-t border-gray-700 sticky bottom-0">
+        <a href="#home" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard h-6 w-6 mb-1"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span class="text-xs">Dashboard</span>
+        </a>
+        <a href="#entrada" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-square h-6 w-6 mb-1 text-green-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
+          <span class="text-xs">Entrada</span>
+        </a>
+        <a href="#saida" class="menu-item flex col flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-square h-6 w-6 mb-1 text-red-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>
+          <span class="text-xs">Saída</span>
+        </a>
+        <a href="#mapa" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map h-6 w-6 mb-1"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+          <span class="text-xs">Mapa</span>
+        </a>
+        <a href="#relatorios" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text h-6 w-6 mb-1"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+          <span class="text-xs">Relatórios</span>
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Modals -->
+  <div id="modal-container" class="hidden"></div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+
+    // --- DADOS DO SISTEMA ---
+    const productList = [
+      { id: 1, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE" },
+      { id: 2, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 3, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 4, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 5, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 6, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "OFF VERDE" },
+      { id: 7, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 8, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE" },
+      { id: 9, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 10, modelo: "BAD BUNNY", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 11, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE" },
+      { id: 12, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 13, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 14, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 15, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 16, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF VERDE" },
+      { id: 17, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 18, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "ROSA" },
+      { id: 19, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE" },
+      { id: 20, modelo: "BAD BUNNY", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 21, modelo: "BAD BUNNY", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 22, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE BRANCO" },
+      { id: 23, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE CINZA" },
+      { id: 24, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "BLACK" },
+      { id: 25, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 26, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 27, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 28, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA PRETO" },
+      { id: 29, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "LARANJA" },
+      { id: 30, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM BARATA" },
+      { id: 31, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM CREME" },
+      { id: 32, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 33, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO CINZA" },
+      { id: 34, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO COSTURA BRANCO" },
+      { id: 35, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE MUSGO" },
+      { id: 36, modelo: "BETA", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 37, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 38, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 39, modelo: "BETA", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 40, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE BRANCO" },
+      { id: 41, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BEGE CINZA" },
+      { id: 42, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "BLACK" },
+      { id: 43, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 44, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 45, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 46, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA PRETO" },
+      { id: 47, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "LARANJA" },
+      { id: 48, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM BARATA" },
+      { id: 49, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM CREME" },
+      { id: 50, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 51, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO CINZA" },
+      { id: 52, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO COSTURA BRANCO" },
+      { id: 53, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE MUSGO" },
+      { id: 54, modelo: "BETA", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 55, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 56, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 57, modelo: "BETA", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 58, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "AZUL" },
+      { id: 59, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 60, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "BRANCO VERDE" },
+      { id: 61, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 62, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 63, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 64, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM" },
+      { id: 65, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "MOSTARDA" },
+      { id: 66, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 67, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 68, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 69, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
+      { id: 70, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 71, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "GRAFITE" },
+      { id: 72, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO BEGE" },
+      { id: 73, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO PRETO" },
+      { id: 74, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 75, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 76, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 77, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "AZUL" },
+      { id: 78, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 79, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BRANCO VERDE" },
+      { id: 80, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 81, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 82, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 83, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "GRAFITE" },
+      { id: 84, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "LARANJA" },
+      { id: 85, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM" },
+      { id: 86, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MOSTARDA" },
+      { id: 87, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 88, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 89, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 90, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "ROSA" },
+      { id: 91, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "SALMÃO" },
+      { id: 92, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
+      { id: 93, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE ÁGUA" },
+      { id: 94, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 95, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "CAMURÇA OFF AZUL" },
+      { id: 96, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "CAMURÇA OFF ROSA" },
+      { id: 97, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "SINTÉTICO BRANCO AZUL" },
+      { id: 98, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "SINTÉTICO BRANCO ROSA" },
+      { id: 99, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "GRAFITE" },
+      { id: 100, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "PRETO BEGE" },
+      { id: 101, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "PRETO PRETO BEGE" },
+      { id: 102, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BOBBIE GOODS" },
+      { id: 103, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 104, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 105, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 106, modelo: "CAMPUS", grade: "INFANTIL", material: "BOBBIE GOODS", variacao: "BOBBIE GOODS" },
+      { id: 107, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "AZUL" },
+      { id: 108, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 109, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "BRANCO VERDE" },
+      { id: 110, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 111, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 112, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 113, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 114, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 115, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 116, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "ROSA" },
+      { id: 117, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
+      { id: 118, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 119, modelo: "CAMPUS", grade: "INFANTIL", material: "CETIM", variacao: "OFF AZUL" },
+      { id: 120, modelo: "CAMPUS", grade: "INFANTIL", material: "CETIM", variacao: "OFF ROSA" },
+      { id: 121, modelo: "CAMPUS", grade: "INFANTIL", material: "MESSI", variacao: "MESSI" },
+      { id: 122, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 123, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 124, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 125, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 126, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 127, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 128, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 129, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 130, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 131, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 132, modelo: "FORUM", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 133, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "AZUL" },
+      { id: 134, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO CINZA" },
+      { id: 135, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 136, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "CHUMBO" },
+      { id: 137, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "OFF MARROM" },
+      { id: 138, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "ONÇA" },
+      { id: 139, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 140, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 141, modelo: "PALERMO", grade: "BAIXA", material: "SINTÉTICO", variacao: "ROSA" },
+      { id: 142, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "AZUL" },
+      { id: 143, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "BEGE" },
+      { id: 144, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 145, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "CINZA BRANCO" },
+      { id: 146, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 147, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO CINZA" },
+      { id: 148, modelo: "VANS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO PRETO" },
+      { id: 149, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "AZUL" },
+      { id: 150, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BEGE" },
+      { id: 151, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 152, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "CINZA BRANCO" },
+      { id: 153, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO BRANCO" },
+      { id: 154, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO CINZA" },
+      { id: 155, modelo: "VANS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO PRETO" },
+      { id: 156, modelo: "XL SUEDE", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 157, modelo: "XL SUEDE", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 158, modelo: "XL SUEDE", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 159, modelo: "XL SUEDE", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 160, modelo: "XL SUEDE", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 161, modelo: "XL SUEDE", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 162, modelo: "XL SUEDE", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 163, modelo: "XL SUEDE", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 164, modelo: "XL SUEDE", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO BRANCO" },
+      { id: 165, modelo: "XL SUEDE", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 166, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
+    ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
+
+    // Inventário e histórico
+    let inventory = [];
+    let history = [];
+
+    // --- carregar do servidor (D1/KV) ---
+    async function loadFromServer() {
+      try {
+        const res = await fetch('/api/estoque');
+        if (res.ok) {
+          const data = await res.json();
+          inventory = Array.isArray(data.inventory) ? data.inventory : [];
+          history  = Array.isArray(data.history)   ? data.history   : [];
+        }
+      } catch (err) {
+        console.warn('Não foi possível carregar do KV, usando arrays vazios', err);
+        inventory = [];
+        history = [];
+      }
+    }
+
+    // --- salvar ---
+    async function persist() {
+      try {
+        await fetch('/api/estoque', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inventory, history })
+        });
+      } catch (err) {
+        console.warn('Falha ao salvar no KV', err);
+      }
+    }
+
+    const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
+    const adminPassword = '123';
+    let adminAuthenticated = false;
+
+    const pages = document.querySelectorAll('.page');
+    const menuItems = document.querySelectorAll('.menu-item');
+    const headerTitle = document.getElementById('header-title');
+
+    // --- FILTROS DO MAPA ---
+    let mapFilters = { modelo: '', grade: '', variacao: '' };
+    const clearMapFilters = () => { mapFilters = { modelo: '', grade: '', variacao: '' }; };
+    const matchesMapFilter = (product) => {
+      if (!product) return false;
+      if (mapFilters.modelo && product.modelo !== mapFilters.modelo) return false;
+      if (mapFilters.grade && product.grade !== mapFilters.grade) return false;
+      if (mapFilters.variacao && product.variacao !== mapFilters.variacao) return false;
+      return true;
+    };
+
+    // ======= SCANNER / QR (com bip + delay 3s) =======
+    let preselectedLocation = null;
+
+    // pequeno bip usando WebAudio (funciona offline)
+    function beep() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 880; // agudo
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.01);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.12);
+      } catch (_) {}
+    }
+
+    function parseScannedPayload(text) {
+      try {
+        const j = JSON.parse(text);
+        return {
+          productId: j.productId ?? null,
+          quantity: Number(j.quantity) || 0,
+          modelo: j.modelo || null,
+          grade: j.grade || null,
+          material: j.material || null,
+          variacao: j.variacao || null
+        };
+      } catch(_) {
+        if (text.includes('|')) {
+          const [pid, qty] = text.split('|');
+          return { productId: Number(pid) || null, quantity: Number(qty) || 0 };
+        }
+        if (text.includes(';')) {
+          const [modelo, grade, material, variacao, qty] = text.split(';').map(s=>s.trim());
+          return { productId: null, quantity: Number(qty)||0, modelo, grade, material, variacao };
+        }
+        const n = Number(text.trim());
+        if (!Number.isNaN(n)) return { productId: n, quantity: 0 };
+        return { productId: null, quantity: 0 };
+      }
+    }
+
+    function findProductFromScan(payload) {
+      if (payload.productId) {
+        return productList.find(p => p.id === payload.productId) || null;
+      }
+      if (payload.modelo && payload.grade && payload.material && payload.variacao) {
+        return productList.find(p =>
+          p.modelo === payload.modelo &&
+          p.grade === payload.grade &&
+          p.material === payload.material &&
+          p.variacao === payload.variacao
+        ) || null;
+      }
+      return null;
+    }
+
+    function showScanModal(onSuccess) {
+      const content = `
+        <div class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold">Ler código</h3>
+            <button class="text-gray-400 hover:text-gray-600" id="scan-close">✕</button>
+          </div>
+          <div id="reader" style="width:100%"></div>
+          <div id="scan-feedback" class="hidden mt-3 px-3 py-2 rounded-md bg-green-100 text-green-800 text-sm font-medium">Código lido! Processando...</div>
+          <p class="text-xs text-gray-500 mt-3">Se solicitado, permita o acesso à câmera. Suporta QR (e códigos gerados pelo sistema).</p>
+        </div>`;
+      showModal(content);
+
+      const reader = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      let handled = false; // trava anti-duplo
+      function cleanup() {
+        reader.stop().catch(()=>{}).finally(()=>reader.clear().catch(()=>{}));
+        closeModal();
+      }
+      document.getElementById('scan-close').onclick = cleanup;
+
+      reader.start(
+        { facingMode: "environment" },
+        config,
+        decodedText => {
+          if (handled) return;
+          handled = true;
+          // feedback visual + som
+          document.getElementById('scan-feedback')?.classList.remove('hidden');
+          beep();
+
+          // espera 3s antes de fechar e entregar o resultado
+          setTimeout(() => {
+            const payload = parseScannedPayload(decodedText);
+            const product = findProductFromScan(payload);
+            const quantity = payload.quantity || 0;
+            cleanup();
+            if (!product) { showToast('Produto não encontrado para o código lido.', 'error'); return; }
+            onSuccess({ product, quantity });
+          }, 3000);
+        },
+        _=>{}
+      ).catch(err => showToast('Erro ao acessar câmera: ' + err, 'error'));
+    }
+    // ======= FIM SCANNER =======
+
+    // --- RENDERIZAÇÃO ---
+    const renderDashboard = () => {
+      const container = document.getElementById('page-home');
+      const totalBoxes = inventory.reduce((s, i) => s + i.quantity, 0);
+      const occupiedSlots = new Set(inventory.map(i => i.locationId)).size;
+      const totalSlots = mapLayout.locations.length * mapLayout.positions.length;
+
+      const productCounts = inventory.reduce((acc, i) => {
+        const p = productList.find(pp => pp.id === i.productId);
+        if (p) acc[p.modelo] = (acc[p.modelo] || 0) + i.quantity;
+        return acc;
+      }, {});
+      const topProduct = Object.entries(productCounts).sort((a,b)=>b[1]-a[1])[0];
+
+      container.innerHTML = `
+        <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Caixas em Estoque</h3><p class="text-3xl font-bold mt-2">${totalBoxes.toLocaleString('pt-BR')}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Posições Ocupadas</h3><p class="text-3xl font-bold mt-2">${occupiedSlots} / ${totalSlots}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Modelo com Mais Estoque</h3><p class="text-2xl font-bold mt-2 truncate">${topProduct ? topProduct[0] : 'N/A'}</p><p class="text-gray-500">${topProduct ? `${topProduct[1].toLocaleString('pt-BR')} caixas` : ''}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Produtos Únicos no Estoque</h3><p class="text-3xl font-bold mt-2">${new Set(inventory.map(i => i.productId)).size}</p></div>
+        </div>
+        <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
+          <h3 class="text-xl font-bold mb-4">Movimentações Recentes</h3>
+          <ul class="space-y-3">
+            ${history.slice(0,5).map(h=>`
+              <li class="flex items-start">
+                <span class="text-sm text-gray-500 w-28">${new Date(h.date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
+                <span class="font-semibold ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
+                <span class="ml-4 text-gray-700">${h.details}</span>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    };
+
+    const renderEntrada = () => {
+      const container = document.getElementById('page-entrada');
+      const modelos = [...new Set(productList.map(p => p.modelo))].sort();
+      const allLocations = [];
+      mapLayout.locations.forEach(loc => mapLayout.positions.forEach(pos => allLocations.push(`${loc}-${pos}`)));
+
+      container.innerHTML = `
+        <h1 class="text-3xl font-bold mb-6 text-green-700">Registrar Entrada</h1>
+        <form id="entrada-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
+          <div class="flex items-center justify-between">
+            <div class="font-medium text-gray-700">Preencher via código</div>
+            <button type="button" id="entrada-scan-btn" class="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-sm">Ler código</button>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700">1. Modelo</label>
+            <select id="entrada-modelo" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+              <option value="" disabled selected>Selecione o modelo</option>
+              ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
+            </select>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700">2. Grade</label>
+            <select id="entrada-grade" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">--</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700">3. Material</label>
+            <select id="entrada-material" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">--</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700">4. Variação / Cor</label>
+            <select id="entrada-variacao" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">--</option></select>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-sm font-medium text-gray-700">5. Quantidade</label>
+              <input type="number" id="entrada-quantidade" required min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div><label class="block text-sm font-medium text-gray-700">6. Localização</label>
+              <select id="entrada-location" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                <option value="" disabled selected>Selecione a posição</option>
+                ${allLocations.map(l=>`<option value="${l}">${l}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-bold text-lg flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle h-6 w-6 mr-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+            Confirmar Entrada
+          </button>
+        </form>
+      `;
+      setupEntradaFormListeners();
+
+      if (preselectedLocation) {
+        const sel = document.getElementById('entrada-location');
+        sel.value = preselectedLocation;
+        sel.disabled = true;
+      }
+
+      document.getElementById('entrada-scan-btn').addEventListener('click', () => {
+        showScanModal(({product, quantity}) => {
+          const modeloSelect   = document.getElementById('entrada-modelo');
+          const gradeSelect    = document.getElementById('entrada-grade');
+          const materialSelect = document.getElementById('entrada-material');
+          const variacaoSelect = document.getElementById('entrada-variacao');
+
+          modeloSelect.value = product.modelo;
+          modeloSelect.dispatchEvent(new Event('change'));
+          setTimeout(()=>{
+            gradeSelect.value = product.grade;
+            gradeSelect.dispatchEvent(new Event('change'));
+            setTimeout(()=>{
+              materialSelect.value = product.material;
+              materialSelect.dispatchEvent(new Event('change'));
+              setTimeout(()=>{
+                variacaoSelect.value = product.variacao;
+              },10);
+            },10);
+          },10);
+
+          if (quantity > 0) document.getElementById('entrada-quantidade').value = quantity;
+        });
+      });
+    };
+
+    const renderSaida = () => {
+      const container = document.getElementById('page-saida');
+      if (!inventory.length) {
+        container.innerHTML = `
+          <h1 class="text-3xl font-bold mb-6 text-red-700">Registrar Saída</h1>
+          <div class="bg-white p-6 rounded-lg shadow-md text-center"><p class="text-gray-600">Não há itens no estoque para registrar saída.</p></div>
+        `;
+        return;
+      }
+      container.innerHTML = `
+        <h1 class="text-3xl font-bold mb-6 text-red-700">Registrar Saída</h1>
+        <form id="saida-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
+          <div class="flex items-center justify-between">
+            <div class="font-medium text-gray-700">Preencher via código</div>
+            <button type="button" id="saida-scan-btn" class="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-sm">Ler código</button>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">1. Item em Estoque</label>
+            <select id="saida-item" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+              <option value="" disabled selected>Selecione um item para dar baixa</option>
+              ${
+                inventory.map((it, idx) => {
+                  const p = productList.find(pp=>pp.id===it.productId);
+                  return { idx, locationId: it.locationId, label: `(${it.locationId}) ${p.nomeCompleto} - ${it.quantity} caixas` };
+                })
+                .sort((a,b)=>a.locationId.localeCompare(b.locationId))
+                .map(r=>`<option value="${r.idx}">${r.label}</option>`).join('')
+              }
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">2. Quantidade a Retirar</label>
+            <input type="number" id="saida-quantidade" required min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Máx: 0">
+          </div>
+          <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 font-bold text-lg flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 mr-2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+            Confirmar Saída
+          </button>
+        </form>
+      `;
+      setupSaidaFormListeners();
+
+      document.getElementById('saida-scan-btn').addEventListener('click', () => {
+        showScanModal(({product, quantity}) => {
+          const idx = inventory.findIndex(i => i.productId === product.id);
+          if (idx === -1) { showToast('Este produto não está no estoque.', 'error'); return; }
+          const sel = document.getElementById('saida-item');
+          sel.value = String(idx);
+          sel.dispatchEvent(new Event('change'));
+          if (quantity > 0) {
+            const max = inventory[idx].quantity;
+            document.getElementById('saida-quantidade').value = Math.min(quantity, max);
+          }
+        });
+      });
+    };
+
+    const renderMap = () => {
+      const container = document.getElementById('page-mapa');
+      const modelos = [...new Set(productList.map(p => p.modelo))].sort();
+
+      const filtersHtml = `
+        <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
+            <select id="map-modelo" class="w-full p-2 border rounded-md">
+              <option value="">Todos</option>
+              ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+            <select id="map-grade" class="w-full p-2 border rounded-md" disabled><option value="">Todas</option></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cor (Variação)</label>
+            <select id="map-variacao" class="w-full p-2 border rounded-md" disabled><option value="">Todas</option></select>
+          </div>
+          <div class="flex items-end gap-2">
+            <button id="map-clear" class="w-full md:w-auto bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md">Limpar</button>
+          </div>
+        </div>
+        <div class="mb-4">
+          <input type="text" id="map-search" placeholder="Busca livre (modelo/material/cor)..." class="w-full max-w-md p-2 border rounded-md">
+        </div>
+      `;
+
+      const locationsHtml = mapLayout.locations.map(loc => {
+        const fundoId = `${loc}-FUNDO`;
+        const frenteId = `${loc}-FRENTE`;
+        const qtyFundo  = inventory.filter(i => i.locationId === fundoId).reduce((s,i)=>s+i.quantity,0);
+        const qtyFrente = inventory.filter(i => i.locationId === frenteId).reduce((s,i)=>s+i.quantity,0);
+        const cls = (qty) => qty > 0 ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
+        return `
+          <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
+            <div class="font-bold text-gray-700 border-b pb-1 text-lg">${loc}</div>
+            <div id="map-cell-${fundoId}" data-location-id="${fundoId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${cls(qtyFundo)}">
+              FUNDO ${qtyFundo > 0 ? `(${qtyFundo})` : ''}
+            </div>
+            <div id="map-cell-${frenteId}" data-location-id="${frenteId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${cls(qtyFrente)}">
+              FRENTE ${qtyFrente > 0 ? `(${qtyFrente})` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <h1 class="text-3xl font-bold mb-2">Mapa do Estoque</h1>
+        <p class="text-gray-600 mb-4">Use os filtros ou a busca livre. As posições que contêm o produto selecionado ficam destacadas.</p>
+        ${filtersHtml}
+        <div id="map-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">${locationsHtml}</div>
+        <p id="map-empty" class="hidden mt-4 text-sm text-gray-600">Nenhuma posição atende aos filtros atuais.</p>
+      `;
+
+      document.querySelectorAll('.map-card-position').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const locationId = cell.dataset.locationId;
+          const items = inventory.filter(i => i.locationId === locationId);
+          showMapCellModal(locationId, items);
+        });
+      });
+
+      const modeloSel = document.getElementById('map-modelo');
+      const gradeSel = document.getElementById('map-grade');
+      const variacaoSel = document.getElementById('map-variacao');
+      const searchInput = document.getElementById('map-search');
+      const clearBtn = document.getElementById('map-clear');
+
+      const resetSelect = (el, label, disabled=true) => { el.innerHTML = `<option value="">${label}</option>`; el.disabled = !!disabled; };
+
+      const populateGrades = () => {
+        resetSelect(gradeSel, 'Todas', false);
+        const grades = [...new Set(productList.filter(p => !mapFilters.modelo || p.modelo === mapFilters.modelo).map(p => p.grade))].sort();
+        gradeSel.innerHTML = `<option value="">Todas</option>` + grades.map(g=>`<option value="${g}">${g}</option>`).join('');
+      };
+      const populateVariacoes = () => {
+        resetSelect(variacaoSel, 'Todas', false);
+        const variacoes = [...new Set(productList.filter(p => (!mapFilters.modelo || p.modelo === mapFilters.modelo) && (!mapFilters.grade || p.grade === mapFilters.grade)).map(p => p.variacao))].sort();
+        variacaoSel.innerHTML = `<option value="">Todas</option>` + variacoes.map(v=>`<option value="${v}">${v}</option>`).join('');
+      };
+
+      const applyMapHighlight = () => {
+        const cards = Array.from(document.querySelectorAll('.map-card-position'));
+        cards.forEach(c => { c.classList.remove('ring-4','ring-yellow-400'); c.parentElement.classList.remove('opacity-25'); });
+
+        const hasActiveFilter = !!(mapFilters.modelo || mapFilters.grade || mapFilters.variacao);
+        const term = (searchInput.value || '').toLowerCase().trim();
+        const cellMatches = (locationId) => {
+          const items = inventory.filter(i => i.locationId === locationId);
+          return items.some(it => {
+            const p = productList.find(pp => pp.id === it.productId);
+            const filterOk = !hasActiveFilter ? true : matchesMapFilter(p);
+            const termOk = !term ? true : (p?.nomeCompleto?.toLowerCase().includes(term) || p?.material?.toLowerCase().includes(term));
+            return filterOk && termOk;
+          });
+        };
+
+        let matchesCount = 0;
+        cards.forEach(cell => {
+          const locationId = cell.dataset.locationId;
+          if (cellMatches(locationId)) {
+            cell.classList.add('ring-4','ring-yellow-400');
+            matchesCount++;
+          } else {
+            const parent = cell.parentElement;
+            const siblingId = locationId.endsWith('FUNDO') ? locationId.replace('FUNDO','FRENTE') : locationId.replace('FRENTE','FUNDO');
+            if (!cellMatches(siblingId)) parent.classList.add('opacity-25');
+          }
+        });
+        document.getElementById('map-empty').classList.toggle('hidden', matchesCount > 0);
+      };
+
+      modeloSel.addEventListener('change', () => {
+        mapFilters.modelo = modeloSel.value; mapFilters.grade=''; mapFilters.variacao='';
+        populateGrades(); resetSelect(variacaoSel, 'Todas', true); applyMapHighlight();
+      });
+      gradeSel.addEventListener('change', () => { mapFilters.grade = gradeSel.value; mapFilters.variacao=''; populateVariacoes(); applyMapHighlight(); });
+      variacaoSel.addEventListener('change', () => { mapFilters.variacao = variacaoSel.value; applyMapHighlight(); });
+      searchInput.addEventListener('input', applyMapHighlight);
+      clearBtn.addEventListener('click', () => {
+        clearMapFilters(); modeloSel.value=''; resetSelect(gradeSel,'Todas',true); resetSelect(variacaoSel,'Todas',true); searchInput.value=''; applyMapHighlight();
+      });
+
+      applyMapHighlight();
+    };
+
+    const renderReports = () => {
+      const container = document.getElementById('page-relatorios');
+      const modelos = [...new Set(productList.map(p => p.modelo))].sort();
+      const grades = [...new Set(productList.map(p => p.grade))].sort();
+      const materiais = [...new Set(productList.map(p => p.material))].sort();
+
+      container.innerHTML = `
+        <h1 class="text-3xl font-bold mb-6">Gerador de Relatórios</h1>
+        <div class="bg-white p-6 rounded-lg shadow-md">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div><label class="block text-sm font-medium text-gray-700">Modelo (múltiplo)</label>
+              <select id="filter-modelo" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Ctrl/Cmd para múltiplos.</p>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-700">Grade (múltiplo)</label>
+              <select id="filter-grade" multiple size="4" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                ${grades.map(g=>`<option value="${g}">${g}</option>`).join('')}
+              </select>
+            </div>
+            <div><label class="block text-sm font-medium text-gray-700">Material (múltiplo)</label>
+              <select id="filter-material" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                ${materiais.map(m=>`<option value="${m}">${m}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="flex flex-col md:flex-row gap-3">
+            <button id="generate-report-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Gerar Relatório</button>
+            <button id="print-report-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50" disabled>Imprimir</button>
+            <button id="export-csv-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50" disabled>Exportar CSV</button>
+          </div>
+          <div id="report-result" class="mt-6"></div>
+        </div>
+      `;
+      document.getElementById('generate-report-btn').addEventListener('click', generateReport);
+
+      const printBtn = document.getElementById('print-report-btn');
+      const exportBtn = document.getElementById('export-csv-btn');
+
+      printBtn.addEventListener('click', () => {
+        const html = document.getElementById('report-result').innerHTML;
+        const w = window.open('', '_blank');
+        w.document.write(`<html><head><meta charset="utf-8"/><title>Relatório</title>
+          <style>body{font-family:Inter,Arial,sans-serif;padding:16px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;font-size:14px;}th{background:#f8f8f8;text-transform:uppercase;letter-spacing:.04em;}</style>
+          </head><body>${html}</body></html>`);
+        w.document.close(); w.focus(); w.print(); w.close();
+      });
+
+      exportBtn.addEventListener('click', () => {
+        const rows = Array.from(document.querySelectorAll('#report-result table tbody tr'))
+          .map(tr => Array.from(tr.querySelectorAll('td')).map(td => td.innerText.replace(/\s+/g,' ').trim()));
+        if (!rows.length) return;
+        const header = ['Produto','Localização','Quantidade'];
+        const csv = [header, ...rows].map(r => r.map(v => `"${v.replaceAll('"','""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href=url; a.download=`relatorio-estoque-${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      });
+    };
+
+    const renderHistory = () => {
+      const container = document.getElementById('page-historico');
+      container.innerHTML = `
+        <h1 class="text-3xl font-bold mb-6">Histórico de Movimentações</h1>
+        <div class="bg-white rounded-lg shadow-md overflow-hidden">
+          <ul class="divide-y divide-gray-200">
+            ${history.map(h=>`
+              <li class="p-4">
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-lg ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
+                  <span class="text-sm text-gray-500">${new Date(h.date).toLocaleString('pt-BR')}</span>
+                </div>
+                <p class="mt-2 text-gray-700">${h.details}</p>
+              </li>
+            `).join('')}
+          </ul>
+        </div>
+      `;
+    };
+
+    const renderAdmin = () => {
+      const container = document.getElementById('page-admin');
+      if (!adminAuthenticated) { showAdminLoginModal(); container.innerHTML = `<p class="text-center text-gray-600">Por favor, autentique-se para acessar o painel de administração.</p>`; return; }
+      container.innerHTML = `
+        <h1 class="text-3xl font-bold mb-6">Painel de Administração</h1>
+        <div class="space-y-6">
+          <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
+            <h2 class="text-xl font-bold mb-2">Ações Reversíveis</h2>
+            <p class="text-gray-600 mb-4">Cuidado: afeta o histórico.</p>
+            <button id="undo-last-action-btn" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 ${history.length ? '' : 'opacity-50 cursor-not-allowed'}" ${history.length ? '' : 'disabled'}>Desfazer Última Ação</button>
+          </div>
+          <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
+            <h2 class="text-xl font-bold mb-2">Ações Perigosas</h2>
+            <p class="text-gray-600 mb-4">Irreversíveis e apagam dados permanentemente.</p>
+            <button id="reset-stock-btn" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">Resetar Estoque Completo</button>
+          </div>
+        </div>
+      `;
+      document.getElementById('undo-last-action-btn')?.addEventListener('click', handleUndoLastAction);
+      document.getElementById('reset-stock-btn')?.addEventListener('click', handleResetStock);
+    };
+
+    // --- LÓGICA de Entrada/Saída ---
+    function setupEntradaFormListeners() {
+      const modeloSelect = document.getElementById('entrada-modelo');
+      const gradeSelect = document.getElementById('entrada-grade');
+      const materialSelect = document.getElementById('entrada-material');
+      const variacaoSelect = document.getElementById('entrada-variacao');
+
+      const resetSelect = (el, ph='--') => { el.innerHTML = `<option value="">${ph}</option>`; el.disabled = true; };
+
+      modeloSelect.addEventListener('change', () => {
+        resetSelect(gradeSelect,'Selecione a grade'); resetSelect(materialSelect); resetSelect(variacaoSelect);
+        const grades = [...new Set(productList.filter(p => p.modelo === modeloSelect.value).map(p => p.grade))];
+        gradeSelect.innerHTML = `<option value="" disabled selected>Selecione a grade</option>` + grades.sort().map(g=>`<option value="${g}">${g}</option>`).join('');
+        gradeSelect.disabled = false;
+      });
+      gradeSelect.addEventListener('change', () => {
+        resetSelect(materialSelect,'Selecione o material'); resetSelect(variacaoSelect);
+        const mats = [...new Set(productList.filter(p => p.modelo === modeloSelect.value && p.grade === gradeSelect.value).map(p => p.material))];
+        materialSelect.innerHTML = `<option value="" disabled selected>Selecione o material</option>` + mats.sort().map(m=>`<option value="${m}">${m}</option>`).join('');
+        materialSelect.disabled = false;
+      });
+      materialSelect.addEventListener('change', () => {
+        resetSelect(variacaoSelect,'Selecione a variação');
+        const vars = [...new Set(productList.filter(p => p.modelo === modeloSelect.value && p.grade === gradeSelect.value && p.material === materialSelect.value).map(p => p.variacao))];
+        variacaoSelect.innerHTML = `<option value="" disabled selected>Selecione a variação</option>` + vars.sort().map(v=>`<option value="${v}">${v}</option>`).join('');
+        variacaoSelect.disabled = false;
+      });
+
+      document.getElementById('entrada-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const modelo = modeloSelect.value;
+        const grade = gradeSelect.value;
+        const material = materialSelect.value;
+        const variacao = variacaoSelect.value;
+        const qty = parseInt(document.getElementById('entrada-quantidade').value);
+        const location = document.getElementById('entrada-location').value;
+
+        const product = productList.find(p => p.modelo===modelo && p.grade===grade && p.material===material && p.variacao===variacao);
+        if (!product) return showToast('Produto não encontrado.', 'error');
+
+        const idx = inventory.findIndex(i => i.locationId===location && i.productId===product.id);
+        if (idx > -1) { inventory[idx].quantity += qty; }
+        else { inventory.push({ locationId: location, productId: product.id, quantity: qty }); }
+
+        addHistory('ENTRADA', `+${qty} caixas de ${product.nomeCompleto} em ${location}`);
+        persist();
+        showToast('Entrada registrada com sucesso!');
+        preselectedLocation = null;
+        goTo('#mapa');
+      });
+    }
+
+    function setupSaidaFormListeners() {
+      const itemSelect = document.getElementById('saida-item');
+      const qtdInput = document.getElementById('saida-quantidade');
+
+      const setMax = () => {
+        const idx = parseInt(itemSelect.value);
+        if (Number.isNaN(idx)) { qtdInput.placeholder='Máx: 0'; qtdInput.max=0; return; }
+        const it = inventory[idx]; if (it) { qtdInput.placeholder=`Máx: ${it.quantity}`; qtdInput.max=it.quantity; }
+      };
+      itemSelect.addEventListener('change', setMax); setMax();
+
+      document.getElementById('saida-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const idx = parseInt(itemSelect.value);
+        const qty = parseInt(qtdInput.value);
+        if (Number.isNaN(idx) || !inventory[idx]) return;
+
+        const it = inventory[idx];
+        const p = productList.find(pp=>pp.id===it.productId);
+        if (qty > it.quantity) return showToast('A quantidade de saída não pode ser maior que a quantidade em estoque.', 'error');
+
+        if (qty === it.quantity) { inventory.splice(idx,1); addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId} (estoque zerado)`); }
+        else { it.quantity -= qty; addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId}`); }
+
+        persist();
+        showToast('Saída registrada com sucesso!');
+        goTo('#mapa');
+      });
+    }
+
+    const addHistory = (type, details) => { history.unshift({ date: new Date().toISOString(), type, details }); };
+
+    const generateReport = () => {
+      const getMulti = (id) => Array.from(document.getElementById(id).selectedOptions).map(o => o.value);
+      const modelosSel = getMulti('filter-modelo');
+      const gradesSel = getMulti('filter-grade');
+      const materiaisSel = getMulti('filter-material');
+
+      let rows = inventory.map(i => ({ ...i, product: productList.find(p => p.id === i.productId) }));
+      if (modelosSel.length) rows = rows.filter(r => modelosSel.includes(r.product.modelo));
+      if (gradesSel.length) rows = rows.filter(r => gradesSel.includes(r.product.grade));
+      if (materiaisSel.length) rows = rows.filter(r => materiaisSel.includes(r.product.material));
+
+      const result = document.getElementById('report-result');
+      if (!rows.length) {
+        result.innerHTML = `<p class="text-gray-600 mt-4">Nenhum item encontrado com os filtros selecionados.</p>`;
+        document.getElementById('print-report-btn').disabled = true;
+        document.getElementById('export-csv-btn').disabled = true;
+        return;
+      }
+
+      result.innerHTML = `
+        <div class="overflow-x-auto mt-4">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localização</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              ${
+                rows.sort((a,b)=>a.product.nomeCompleto.localeCompare(b.product.nomeCompleto)).map(r=>`
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${r.product.nomeCompleto}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.locationId}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.quantity}</td>
+                  </tr>`).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      `;
+      document.getElementById('print-report-btn').disabled = false;
+      document.getElementById('export-csv-btn').disabled = false;
+    };
+
+    const handleUndoLastAction = () => {
+      showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', () => {
+        if (history.length) {
+          const last = history.shift();
+          persist();
+          showToast(`Ação "${last.type}" foi desfeita (simulação).`);
+          rerenderCurrentPage();
+        }
+      });
+    };
+
+    const handleResetStock = () => {
+      showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
+        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', () => {
+          inventory = [];
+          history = [];
+          addHistory('RESET','O estoque foi completamente zerado.');
+          persist();
+          showToast('Estoque resetado com sucesso.', 'error');
+          rerenderCurrentPage();
+        });
+      });
+    };
+
+    // --- MODAL / TOAST / CONFIRM ---
+    const showModal = (content) => {
+      const mc = document.getElementById('modal-container');
+      mc.innerHTML = `<div class="modal-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto relative" id="modal-content">${content}</div>
+      </div>`;
+      mc.classList.remove('hidden');
+      mc.querySelector('.modal-backdrop').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    };
+    const closeModal = () => { const mc = document.getElementById('modal-container'); mc.classList.add('hidden'); mc.innerHTML=''; };
+    window.closeModal = closeModal;
+
+    const showMapCellModal = (locationId, items) => {
+      const filtered = items.filter(it => matchesMapFilter(productList.find(p => p.id === it.productId)));
+      const list = (mapFilters.modelo || mapFilters.grade || mapFilters.variacao) && filtered.length ? filtered : items;
+
+      let content;
+      if (list && list.length) {
+        const warn = (!filtered.length && (mapFilters.modelo || mapFilters.grade || mapFilters.variacao))
+          ? `<p class="text-xs text-gray-500 mb-2">* Não há itens que combinem com o filtro nesta posição. Exibindo todos.</p>` : '';
+        const lis = list.map(it => {
+          const p = productList.find(pp => pp.id === it.productId);
+          return `<li class="py-2 border-b last:border-b-0"><p class="font-semibold text-gray-800">${p.nomeCompleto}</p><p class="text-gray-600"><strong>Quantidade:</strong> ${it.quantity} caixas</p></li>`;
+        }).join('');
+        content = `
+          <div class="p-6">
+            <div class="flex justify-between items-start">
+              <h2 class="text-2xl font-bold mb-2">Posição: ${locationId}</h2>
+              <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 -mt-2 -mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            ${warn}
+            <ul class="divide-y">${lis}</ul>
+          </div>`;
+      } else {
+        content = `
+          <div class="p-6">
+            <div class="flex justify-between items-start">
+              <h2 class="text-2xl font-bold mb-4">Posição: ${locationId}</h2>
+              <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 -mt-2 -mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <p class="text-gray-600 mb-4">Esta posição está livre.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <button id="map-add-here" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Adicionar aqui</button>
+              <button id="map-scan-here" class="w-full bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800">Ler código e adicionar</button>
+            </div>
+          </div>`;
+      }
+      showModal(content);
+
+      const addBtn  = document.getElementById('map-add-here');
+      const scanBtn = document.getElementById('map-scan-here');
+      if (addBtn) addBtn.onclick = () => {
+        preselectedLocation = locationId;
+        closeModal();
+        window.location.hash = '#entrada';
+      };
+      if (scanBtn) scanBtn.onclick = () => {
+        preselectedLocation = locationId;
+        showScanModal(({product, quantity}) => {
+          closeModal();
+          window.location.hash = '#entrada';
+        });
+      };
+    };
+
+    const showAdminLoginModal = () => {
+      const content = `
+        <form id="admin-login-form" class="p-6 space-y-4">
+          <h2 class="text-2xl font-bold">Acesso Restrito</h2>
+          <p class="text-sm text-gray-600">Insira a senha de administrador.</p>
+          <div><label class="block text-sm font-medium text-gray-700">Senha</label>
+            <input type="password" id="password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+          </div>
+          <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Entrar</button>
+        </form>`;
+      showModal(content);
+      document.getElementById('admin-login-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const pw = document.getElementById('password').value;
+        if (pw === adminPassword) { adminAuthenticated = true; closeModal(); renderAdmin(); }
+        else showToast('Senha incorreta!', 'error');
+      });
+    };
+
+    const showCustomConfirm = (msg, onConfirm) => {
+      const content = `
+        <div class="p-6">
+          <h3 class="text-lg font-bold mb-4">Confirmação Necessária</h3>
+          <p class="text-gray-700 mb-6">${msg}</p>
+          <div class="flex justify-end gap-3">
+            <button id="confirm-cancel" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Cancelar</button>
+            <button id="confirm-ok" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700">Confirmar</button>
+          </div>
+        </div>`;
+      showModal(content);
+      document.getElementById('confirm-ok').onclick = () => { closeModal(); onConfirm(); };
+      document.getElementById('confirm-cancel').onclick = closeModal;
+    };
+
+    const showToast = (message, type='success') => {
+      const toast = document.createElement('div');
+      toast.className = `fixed bottom-24 md:bottom-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg ${type==='error'?'bg-red-500':'bg-green-500'} z-50`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(), 2500);
+    };
+
+    // --- NAVEGAÇÃO ---
+    const goTo = (hash) => { const cur = window.location.hash || '#home'; if (cur === hash) rerenderCurrentPage(); else window.location.hash = hash; };
+    const navigate = () => {
+      const hash = window.location.hash || '#home';
+      const pageId = `page-${hash.substring(1)}`;
+      pages.forEach(p => p.classList.toggle('hidden', p.id !== pageId));
+      menuItems.forEach(i => i.classList.toggle('active', i.getAttribute('href') === hash));
+      rerenderCurrentPage();
+    };
+    const rerenderCurrentPage = () => {
+      const hash = window.location.hash || '#home';
+      let title = 'Dashboard';
+      switch (hash) {
+        case '#home': renderDashboard(); break;
+        case '#entrada': title='Entrada'; renderEntrada(); break;
+        case '#saida': title='Saída'; renderSaida(); break;
+        case '#mapa': title='Mapa'; renderMap(); break;
+        case '#relatorios': title='Relatórios'; renderReports(); break;
+        case '#historico': title='Histórico'; renderHistory(); break;
+        case '#admin': title='Admin'; renderAdmin(); break;
+      }
+      if (headerTitle) headerTitle.textContent = title;
+    };
+
+    window.addEventListener('hashchange', navigate);
+    (async () => {
+      await loadFromServer();
+      navigate();
+    })();
+
+  });
+  </script>
 </body>
 </html>
-```

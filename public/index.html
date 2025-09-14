@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Controle de Estoque - Indústria de Calçados</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Scanner QR / código de barras -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/dist/html5-qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <meta name="theme-color" content="#1d4ed8"/>
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
     .menu-item.active { background-color: #1d4ed8; color: white; }
@@ -21,26 +21,52 @@
   </style>
 </head>
 <body class="antialiased text-gray-800">
+
   <div id="app" class="flex flex-col md:flex-row min-h-screen">
+    <!-- Sidebar -->
     <aside class="hidden md:flex flex-col w-64 bg-gray-800 text-white">
       <div class="flex items-center justify-center h-16 border-b border-gray-700">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-boxes"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
         <span class="ml-2 text-lg font-bold">Estoque Calçados</span>
       </div>
       <nav class="flex-1 px-2 py-4 space-y-2">
-        <a href="#home" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Dashboard</a>
-        <a href="#entrada" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Entrada</a>
-        <a href="#saida" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Saída</a>
-        <a href="#mapa" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Mapa do Estoque</a>
-        <a href="#relatorios" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Relatórios</a>
-        <a href="#historico" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Histórico</a>
-        <a href="#admin" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">Admin</a>
+        <a href="#home" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard h-5 w-5 mr-3"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          Dashboard
+        </a>
+        <a href="#entrada" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-square h-5 w-5 mr-3 text-green-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
+          Entrada
+        </a>
+        <a href="#saida" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-square h-5 w-5 mr-3 text-red-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>
+          Saída
+        </a>
+        <a href="#mapa" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map h-5 w-5 mr-3"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+          Mapa do Estoque
+        </a>
+        <a href="#relatorios" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text h-5 w-5 mr-3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+          Relatórios
+        </a>
+        <a href="#historico" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history h-5 w-5 mr-3"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Histórico
+        </a>
+        <a href="#admin" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check h-5 w-5 mr-3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+          Admin
+        </a>
       </nav>
     </aside>
 
+    <!-- Main -->
     <div class="flex-1 flex flex-col">
+      <!-- Mobile Header -->
       <header class="md:hidden flex items-center justify-between bg-gray-800 text-white p-4 shadow-md sticky top-0 z-10">
         <div class="flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-boxes"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
           <span id="header-title" class="ml-2 text-lg font-bold">Dashboard</span>
         </div>
       </header>
@@ -55,37 +81,39 @@
         <div id="page-admin" class="page hidden"></div>
       </main>
 
+      <!-- Bottom Nav -->
       <nav class="md:hidden grid grid-cols-5 gap-1 p-2 bg-gray-800 text-white border-t border-gray-700 sticky bottom-0">
-        <a href="#home" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Dashboard</span></a>
-        <a href="#entrada" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Entrada</span></a>
-        <a href="#saida" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Saída</span></a>
-        <a href="#mapa" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Mapa</span></a>
-        <a href="#admin" class="menu-item flex flex-col items-center text-center p-2 rounded-lg"><span class="text-xs">Admin</span></a>
+        <a href="#home" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layout-dashboard h-6 w-6 mb-1"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+          <span class="text-xs">Dashboard</span>
+        </a>
+        <a href="#entrada" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down-square h-6 w-6 mb-1 text-green-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
+          <span class="text-xs">Entrada</span>
+        </a>
+        <a href="#saida" class="menu-item flex col flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-square h-6 w-6 mb-1 text-red-400"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M12 16V8"/><path d="m8 12 4-4 4 4"/></svg>
+          <span class="text-xs">Saída</span>
+        </a>
+        <a href="#mapa" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map h-6 w-6 mb-1"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
+          <span class="text-xs">Mapa</span>
+        </a>
+        <a href="#admin" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check h-6 w-6 mb-1"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+          <span class="text-xs">Admin</span>
+        </a>
       </nav>
     </div>
   </div>
 
+  <!-- Modals -->
   <div id="modal-container" class="hidden"></div>
 
   <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // --- API helpers ---
-    async function apiGet(path) {
-      const r = await fetch(path, { headers: { "accept": "application/json" } });
-      if (!r.ok) throw new Error(await r.text());
-      return r.json();
-    }
-    async function apiPost(path, body) {
-      const r = await fetch(path, {
-        method: "POST",
-        headers: { "content-type": "application/json", "accept": "application/json" },
-        body: JSON.stringify(body)
-      });
-      if (!r.ok) throw new Error(await r.text());
-      return r.json();
-    }
 
-    // --- Catálogo de produtos ---
+    // --- DADOS DO SISTEMA ---
     const productList = [
       { id: 1, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "BEGE" },
       { id: 2, modelo: "BAD BUNNY", grade: "ALTA", material: "CAMURÇA", variacao: "BORDÔ" },
@@ -150,36 +178,41 @@
       { id: 61, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CHUMBO" },
       { id: 62, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA" },
       { id: 63, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
-      { id: 64, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "MOSTARDA" },
-      { id: 65, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "OFF PRETO" },
-      { id: 66, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO" },
-      { id: 67, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO PRETO" },
-      { id: 68, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
-      { id: 69, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
-      { id: 70, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "GRAFITE" },
-      { id: 71, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO BEGE" },
-      { id: 72, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO PRETO" },
-      { id: 73, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 74, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
-      { id: 75, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
-      { id: 76, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "AZUL" },
-      { id: 77, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BORDÔ" },
-      { id: 78, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BRANCO VERDE" },
-      { id: 79, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
-      { id: 80, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
-      { id: 81, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
-      { id: 82, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "GRAFITE" },
-      { id: 83, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "LARANJA" },
-      { id: 84, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM" },
-      { id: 85, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MOSTARDA" },
-      { id: 86, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF PRETO" },
-      { id: 87, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO" },
-      { id: 88, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO PRETO" },
-      { id: 89, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "ROSA" },
-      { id: 90, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "SALMÃO" },
-      { id: 91, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
-      { id: 92, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE ÁGUA" },
-      { id: 93, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 64, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "MARROM" },
+      { id: 65, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "MOSTARDA" },
+      { id: 66, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 67, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 68, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 69, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
+      { id: 70, modelo: "CAMPUS", grade: "ALTA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 71, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "GRAFITE" },
+      { id: 72, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO BEGE" },
+      { id: 73, modelo: "CAMPUS", grade: "ALTA", material: "NYLON", variacao: "PRETO PRETO" },
+      { id: 74, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 75, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 76, modelo: "CAMPUS", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
+      { id: 77, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "AZUL" },
+      { id: 78, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 79, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "BRANCO VERDE" },
+      { id: 80, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 81, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 82, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 83, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "GRAFITE" },
+      { id: 84, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "LARANJA" },
+      { id: 85, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MARROM" },
+      { id: 86, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "MOSTARDA" },
+      { id: 87, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 88, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 89, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 90, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "ROSA" },
+      { id: 91, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "SALMÃO" },
+      { id: 92, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
+      { id: 93, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERDE ÁGUA" },
+      { id: 94, modelo: "CAMPUS", grade: "BAIXA", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 95, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "CAMURÇA OFF AZUL" },
+      { id: 96, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "CAMURÇA OFF ROSA" },
+      { id: 97, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "SINTÉTICO BRANCO AZUL" },
+      { id: 98, modelo: "CAMPUS", grade: "BAIXA", material: "CETIM", variacao: "SINTÉTICO BRANCO ROSA" },
       { id: 99, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "GRAFITE" },
       { id: 100, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "PRETO BEGE" },
       { id: 101, modelo: "CAMPUS", grade: "BAIXA", material: "NYLON", variacao: "PRETO PRETO BEGE" },
@@ -188,6 +221,24 @@
       { id: 104, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "BRANCO" },
       { id: 105, modelo: "CAMPUS", grade: "BAIXA", material: "SINTÉTICO", variacao: "PRETO" },
       { id: 106, modelo: "CAMPUS", grade: "INFANTIL", material: "BOBBIE GOODS", variacao: "BOBBIE GOODS" },
+      { id: 107, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "AZUL" },
+      { id: 108, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "BORDÔ" },
+      { id: 109, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "BRANCO VERDE" },
+      { id: 110, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CHUMBO" },
+      { id: 111, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CINZA CROMIO" },
+      { id: 112, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "CINZA" },
+      { id: 113, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "OFF PRETO" },
+      { id: 114, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO" },
+      { id: 115, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO PRETO" },
+      { id: 116, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "ROSA" },
+      { id: 117, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "VERDE BANDEIRA" },
+      { id: 118, modelo: "CAMPUS", grade: "INFANTIL", material: "CAMURÇA", variacao: "VERMELHO" },
+      { id: 119, modelo: "CAMPUS", grade: "INFANTIL", material: "CETIM", variacao: "OFF AZUL" },
+      { id: 120, modelo: "CAMPUS", grade: "INFANTIL", material: "CETIM", variacao: "OFF ROSA" },
+      { id: 121, modelo: "CAMPUS", grade: "INFANTIL", material: "MESSI", variacao: "MESSI" },
+      { id: 122, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
+      { id: 123, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
+      { id: 124, modelo: "CAMPUS", grade: "INFANTIL", material: "SINTÉTICO", variacao: "PRETO" },
       { id: 125, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO" },
       { id: 126, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
       { id: 127, modelo: "FORUM", grade: "ALTA", material: "SINTÉTICO", variacao: "PRETO" },
@@ -230,28 +281,53 @@
       { id: 164, modelo: "XL SUEDE", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO BRANCO" },
       { id: 165, modelo: "XL SUEDE", grade: "INFANTIL", material: "CAMURÇA", variacao: "PRETO PRETO" },
       { id: 166, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO PRETO" },
-      { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" }
+      { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
     ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
 
-    // Estado carregado do servidor
-    let inventory = [];
-    let history = [];
-    let adminAuthenticated = false;
+// Inventário e histórico inicial (carregados do KV)
+let inventory = [];
+let history = [];
+
+// --- carregar do KV (Cloudflare D1 via Pages Function) ---
+async function loadFromServer() {
+  try {
+    const res = await fetch('/api/estoque');
+    if (res.ok) {
+      const data = await res.json();
+      inventory = Array.isArray(data.inventory) ? data.inventory : [];
+      history  = Array.isArray(data.history)   ? data.history   : [];
+    }
+  } catch (err) {
+    console.warn('Não foi possível carregar do KV, usando arrays vazios', err);
+    inventory = [];
+    history = [];
+  }
+}
+
+// --- salvar no KV sempre que algo muda ---
+async function persist() {
+  try {
+    await fetch('/api/estoque', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventory, history })
+    });
+  } catch (err) {
+    console.warn('Falha ao salvar no KV', err);
+  }
+}
 
     const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
+    const adminPassword = '123';
+    let adminAuthenticated = false;
+
     const pages = document.querySelectorAll('.page');
     const menuItems = document.querySelectorAll('.menu-item');
     const headerTitle = document.getElementById('header-title');
 
-    async function syncFromServer() {
-      [inventory, history] = await Promise.all([
-        apiGet("/api/inventory"),
-        apiGet("/api/history")
-      ]);
-    }
-
-    // --- Mapa filtros ---
+    // --- FILTROS DO MAPA ---
     let mapFilters = { modelo: '', grade: '', variacao: '' };
+    const clearMapFilters = () => { mapFilters = { modelo: '', grade: '', variacao: '' }; };
     const matchesMapFilter = (product) => {
       if (!product) return false;
       if (mapFilters.modelo && product.modelo !== mapFilters.modelo) return false;
@@ -260,27 +336,108 @@
       return true;
     };
 
-    // --- Renderizações ---
+    // ======= SCANNER / QR (adição) =======
+    let preselectedLocation = null; // posição escolhida a partir do mapa
+
+    function parseScannedPayload(text) {
+      try {
+        const j = JSON.parse(text);
+        return {
+          productId: j.productId ?? null,
+          quantity: Number(j.quantity) || 0,
+          modelo: j.modelo || null,
+          grade: j.grade || null,
+          material: j.material || null,
+          variacao: j.variacao || null
+        };
+      } catch(_) {
+        if (text.includes('|')) {
+          const [pid, qty] = text.split('|');
+          return { productId: Number(pid) || null, quantity: Number(qty) || 0 };
+        }
+        if (text.includes(';')) {
+          const [modelo, grade, material, variacao, qty] = text.split(';').map(s=>s.trim());
+          return { productId: null, quantity: Number(qty)||0, modelo, grade, material, variacao };
+        }
+        const n = Number(text.trim());
+        if (!Number.isNaN(n)) return { productId: n, quantity: 0 };
+        return { productId: null, quantity: 0 };
+      }
+    }
+
+    function findProductFromScan(payload) {
+      if (payload.productId) {
+        return productList.find(p => p.id === payload.productId) || null;
+      }
+      if (payload.modelo && payload.grade && payload.material && payload.variacao) {
+        return productList.find(p =>
+          p.modelo === payload.modelo &&
+          p.grade === payload.grade &&
+          p.material === payload.material &&
+          p.variacao === payload.variacao
+        ) || null;
+      }
+      return null;
+    }
+
+    function showScanModal(onSuccess) {
+      const content = `
+        <div class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold">Ler código</h3>
+            <button class="text-gray-400 hover:text-gray-600" id="scan-close">✕</button>
+          </div>
+          <div id="reader" style="width:100%"></div>
+          <p class="text-xs text-gray-500 mt-3">Suporta QR e códigos comuns. Melhore a luz para leitura.</p>
+        </div>`;
+      showModal(content);
+
+      const reader = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      function cleanup() {
+        reader.stop().catch(()=>{}).finally(()=>reader.clear().catch(()=>{}));
+        closeModal();
+      }
+      document.getElementById('scan-close').onclick = cleanup;
+
+      reader.start(
+        { facingMode: "environment" },
+        config,
+        decodedText => {
+          const payload = parseScannedPayload(decodedText);
+          const product = findProductFromScan(payload);
+          const quantity = payload.quantity || 0;
+          cleanup();
+          if (!product) { showToast('Produto não encontrado para o código lido.', 'error'); return; }
+          onSuccess({ product, quantity });
+        },
+        _=>{}
+      ).catch(err => showToast('Erro ao acessar câmera: ' + err, 'error'));
+    }
+    // ======= FIM SCANNER =======
+
+    // --- RENDERIZAÇÃO ---
     const renderDashboard = () => {
       const container = document.getElementById('page-home');
-      const totalBoxes = inventory.reduce((s,i)=>s+i.quantity,0);
-      const occupied = new Set(inventory.map(i=>i.locationId)).size;
+      const totalBoxes = inventory.reduce((s, i) => s + i.quantity, 0);
+      const occupiedSlots = new Set(inventory.map(i => i.locationId)).size;
       const totalSlots = mapLayout.locations.length * mapLayout.positions.length;
 
-      const productCounts = inventory.reduce((acc, it) => {
-        const p = productList.find(pp => pp.id === it.productId);
-        if (p) acc[p.modelo] = (acc[p.modelo] || 0) + it.quantity;
+      const productCounts = inventory.reduce((acc, i) => {
+        const p = productList.find(pp => pp.id === i.productId);
+        if (p) acc[p.modelo] = (acc[p.modelo] || 0) + i.quantity;
         return acc;
       }, {});
-      const top = Object.entries(productCounts).sort((a,b)=>b[1]-a[1])[0];
+      const topProduct = Object.entries(productCounts).sort((a,b)=>b[1]-a[1])[0];
 
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm">Caixas em Estoque</h3><p class="text-3xl font-bold mt-2">${totalBoxes.toLocaleString('pt-BR')}</p></div>
-          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm">Posições Ocupadas</h3><p class="text-3xl font-bold mt-2">${occupied} / ${totalSlots}</p></div>
-          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm">Modelo com Mais Estoque</h3><p class="text-2xl font-bold mt-2 truncate">${top?top[0]:'N/A'}</p><p class="text-gray-500">${top?`${top[1].toLocaleString('pt-BR')} caixas`:''}</p></div>
-          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm">Produtos Únicos</h3><p class="text-3xl font-bold mt-2">${new Set(inventory.map(i=>i.productId)).size}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Caixas em Estoque</h3><p class="text-3xl font-bold mt-2">${totalBoxes.toLocaleString('pt-BR')}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Posições Ocupadas</h3><p class="text-3xl font-bold mt-2">${occupiedSlots} / ${totalSlots}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Modelo com Mais Estoque</h3><p class="text-2xl font-bold mt-2 truncate">${topProduct ? topProduct[0] : 'N/A'}</p><p class="text-gray-500">${topProduct ? `${topProduct[1].toLocaleString('pt-BR')} caixas` : ''}</p></div>
+          <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Produtos Únicos no Estoque</h3><p class="text-3xl font-bold mt-2">${new Set(inventory.map(i => i.productId)).size}</p></div>
         </div>
         <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
           <h3 class="text-xl font-bold mb-4">Movimentações Recentes</h3>
@@ -290,126 +447,218 @@
                 <span class="text-sm text-gray-500 w-28">${new Date(h.date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                 <span class="font-semibold ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
                 <span class="ml-4 text-gray-700">${h.details}</span>
-              </li>`).join('')}
+              </li>
+            `).join('')}
           </ul>
-        </div>`;
+        </div>
+      `;
     };
 
     const renderEntrada = () => {
       const container = document.getElementById('page-entrada');
-      const modelos = [...new Set(productList.map(p=>p.modelo))].sort();
-      const allLocations = []; mapLayout.locations.forEach(l => mapLayout.positions.forEach(pos => allLocations.push(`${l}-${pos}`)));
+      const modelos = [...new Set(productList.map(p => p.modelo))].sort();
+
+      // TODAS as posições disponíveis (multi-ocupação)
+      const allLocations = [];
+      mapLayout.locations.forEach(loc => mapLayout.positions.forEach(pos => allLocations.push(`${loc}-${pos}`)));
 
       container.innerHTML = `
-      <h1 class="text-3xl font-bold mb-6 text-green-700">Registrar Entrada</h1>
-      <form id="entrada-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
-        <div><label class="block text-sm font-medium text-gray-700">1. Modelo</label>
-          <select id="entrada-modelo" required class="mt-1 block w-full p-2 border rounded-md">
-            <option value="" disabled selected>Selecione o modelo</option>
-            ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
-          </select>
-        </div>
-        <div><label class="block text-sm font-medium text-gray-700">2. Grade</label>
-          <select id="entrada-grade" required disabled class="mt-1 block w-full p-2 border rounded-md"><option value="">--</option></select>
-        </div>
-        <div><label class="block text-sm font-medium text-gray-700">3. Material</label>
-          <select id="entrada-material" required disabled class="mt-1 block w-full p-2 border rounded-md"><option value="">--</option></select>
-        </div>
-        <div><label class="block text-sm font-medium text-gray-700">4. Variação / Cor</label>
-          <select id="entrada-variacao" required disabled class="mt-1 block w-full p-2 border rounded-md"><option value="">--</option></select>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label class="block text-sm font-medium text-gray-700">5. Quantidade</label>
-            <input type="number" id="entrada-quantidade" required min="1" class="mt-1 block w-full p-2 border rounded-md">
+        <h1 class="text-3xl font-bold mb-6 text-green-700">Registrar Entrada</h1>
+        <form id="entrada-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
+          <div class="flex items-center justify-between">
+            <div class="font-medium text-gray-700">Preencher via código</div>
+            <button type="button" id="entrada-scan-btn" class="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-sm">Ler código</button>
           </div>
-          <div><label class="block text-sm font-medium text-gray-700">6. Localização</label>
-            <select id="entrada-location" required class="mt-1 block w-full p-2 border rounded-md">
-              <option value="" disabled selected>Selecione a posição</option>
-              ${allLocations.map(l=>`<option value="${l}">${l}</option>`).join('')}
+          <div><label class="block text-sm font-medium text-gray-700">1. Modelo</label>
+            <select id="entrada-modelo" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+              <option value="" disabled selected>Selecione o modelo</option>
+              ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
             </select>
           </div>
-        </div>
-        <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-bold">Confirmar Entrada</button>
-      </form>`;
+          <div><label class="block text-sm font-medium text-gray-700">2. Grade</label>
+            <select id="entrada-grade" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">--</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700">3. Material</label>
+            <select id="entrada-material" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">--</option></select>
+          </div>
+          <div><label class="block text-sm font-medium text-gray-700">4. Variação / Cor</label>
+            <select id="entrada-variacao" required disabled class="mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">--</option></select>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-sm font-medium text-gray-700">5. Quantidade</label>
+              <input type="number" id="entrada-quantidade" required min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div><label class="block text-sm font-medium text-gray-700">6. Localização</label>
+              <select id="entrada-location" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                <option value="" disabled selected>Selecione a posição</option>
+                ${allLocations.map(l=>`<option value="${l}">${l}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-bold text-lg flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle h-6 w-6 mr-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+            Confirmar Entrada
+          </button>
+        </form>
+      `;
       setupEntradaFormListeners();
+
+      // Pré-seleção da posição (vinda do mapa)
+      if (preselectedLocation) {
+        const sel = document.getElementById('entrada-location');
+        sel.value = preselectedLocation;
+        sel.disabled = true;
+      }
+
+      // Scanner na entrada
+      document.getElementById('entrada-scan-btn').addEventListener('click', () => {
+        showScanModal(({product, quantity}) => {
+          const modeloSelect   = document.getElementById('entrada-modelo');
+          const gradeSelect    = document.getElementById('entrada-grade');
+          const materialSelect = document.getElementById('entrada-material');
+          const variacaoSelect = document.getElementById('entrada-variacao');
+
+          modeloSelect.value = product.modelo;
+          modeloSelect.dispatchEvent(new Event('change'));
+          setTimeout(()=>{
+            gradeSelect.value = product.grade;
+            gradeSelect.dispatchEvent(new Event('change'));
+            setTimeout(()=>{
+              materialSelect.value = product.material;
+              materialSelect.dispatchEvent(new Event('change'));
+              setTimeout(()=>{
+                variacaoSelect.value = product.variacao;
+              },10);
+            },10);
+          },10);
+
+          if (quantity > 0) document.getElementById('entrada-quantidade').value = quantity;
+        });
+      });
     };
 
     const renderSaida = () => {
       const container = document.getElementById('page-saida');
       if (!inventory.length) {
-        container.innerHTML = \`
+        container.innerHTML = `
           <h1 class="text-3xl font-bold mb-6 text-red-700">Registrar Saída</h1>
-          <div class="bg-white p-6 rounded-lg shadow-md text-center"><p class="text-gray-600">Não há itens no estoque para registrar saída.</p></div>\`;
+          <div class="bg-white p-6 rounded-lg shadow-md text-center"><p class="text-gray-600">Não há itens no estoque para registrar saída.</p></div>
+        `;
         return;
       }
-      container.innerHTML = \`
+      container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6 text-red-700">Registrar Saída</h1>
         <form id="saida-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
-          <div><label class="block text-sm font-medium text-gray-700">1. Item em Estoque</label>
-            <select id="saida-item" required class="mt-1 block w-full p-2 border rounded-md">
+          <div class="flex items-center justify-between">
+            <div class="font-medium text-gray-700">Preencher via código</div>
+            <button type="button" id="saida-scan-btn" class="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-sm">Ler código</button>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">1. Item em Estoque</label>
+            <select id="saida-item" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
               <option value="" disabled selected>Selecione um item para dar baixa</option>
               ${
-                inventory.map(it => {
+                inventory.map((it, idx) => {
                   const p = productList.find(pp=>pp.id===it.productId);
-                  const label = \`(\${it.locationId}) \${p?.nomeCompleto || it.productId} - \${it.quantity} caixas\`;
-                  return { id: it.id, locationId: it.locationId, label };
+                  return { idx, locationId: it.locationId, label: `(${it.locationId}) ${p.nomeCompleto} - ${it.quantity} caixas` };
                 })
                 .sort((a,b)=>a.locationId.localeCompare(b.locationId))
-                .map(r=>\`<option value="\${r.id}">\${r.label}</option>\`).join('')
+                .map(r=>`<option value="${r.idx}">${r.label}</option>`).join('')
               }
             </select>
           </div>
-          <div><label class="block text-sm font-medium text-gray-700">2. Quantidade a Retirar</label>
-            <input type="number" id="saida-quantidade" required min="1" class="mt-1 block w-full p-2 border rounded-md" placeholder="Máx: 0">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">2. Quantidade a Retirar</label>
+            <input type="number" id="saida-quantidade" required min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Máx: 0">
           </div>
-          <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 font-bold">Confirmar Saída</button>
-        </form>\`;
+          <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 font-bold text-lg flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 mr-2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+            Confirmar Saída
+          </button>
+        </form>
+      `;
       setupSaidaFormListeners();
+
+      // Scanner na saída
+      document.getElementById('saida-scan-btn').addEventListener('click', () => {
+        showScanModal(({product, quantity}) => {
+          const idx = inventory.findIndex(i => i.productId === product.id);
+          if (idx === -1) { showToast('Este produto não está no estoque.', 'error'); return; }
+          const sel = document.getElementById('saida-item');
+          sel.value = String(idx);
+          sel.dispatchEvent(new Event('change'));
+          if (quantity > 0) {
+            const max = inventory[idx].quantity;
+            document.getElementById('saida-quantidade').value = Math.min(quantity, max);
+          }
+        });
+      });
     };
 
     const renderMap = () => {
       const container = document.getElementById('page-mapa');
       const modelos = [...new Set(productList.map(p => p.modelo))].sort();
 
-      const filtersHtml = \`
+      const filtersHtml = `
         <div class="mb-4 grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
-            <select id="map-modelo" class="w-full p-2 border rounded-md"><option value="">Todos</option>\${modelos.map(m=>\`<option value="\${m}">\${m}</option>\`).join('')}</select>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
+            <select id="map-modelo" class="w-full p-2 border rounded-md">
+              <option value="">Todos</option>
+              ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
+            </select>
           </div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Grade</label>
             <select id="map-grade" class="w-full p-2 border rounded-md" disabled><option value="">Todas</option></select>
           </div>
-          <div><label class="block text-sm font-medium text-gray-700 mb-1">Cor (Variação)</label>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cor (Variação)</label>
             <select id="map-variacao" class="w-full p-2 border rounded-md" disabled><option value="">Todas</option></select>
           </div>
-          <div class="flex items-end gap-2"><button id="map-clear" class="w-full md:w-auto bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md">Limpar</button></div>
+          <div class="flex items-end gap-2">
+            <button id="map-clear" class="w-full md:w-auto bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md">Limpar</button>
+          </div>
         </div>
-        <div class="mb-4"><input type="text" id="map-search" placeholder="Busca livre (modelo/material/cor)..." class="w-full max-w-md p-2 border rounded-md"></div>
-      \`;
+        <div class="mb-4">
+          <input type="text" id="map-search" placeholder="Busca livre (modelo/material/cor)..." class="w-full max-w-md p-2 border rounded-md">
+        </div>
+      `;
 
+      // === mapa exibindo TOTAL DE CAIXAS por posição ===
       const locationsHtml = mapLayout.locations.map(loc => {
-        const fundoId = \`\${loc}-FUNDO\`; const frenteId = \`\${loc}-FRENTE\`;
-        const itemsFundo = inventory.filter(i => i.locationId === fundoId);
-        const itemsFrente = inventory.filter(i => i.locationId === frenteId);
-        const cls = items => items.length ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
-        return \`
+        const fundoId = `${loc}-FUNDO`;
+        const frenteId = `${loc}-FRENTE`;
+
+        const qtyFundo  = inventory.filter(i => i.locationId === fundoId).reduce((s,i)=>s+i.quantity,0);
+        const qtyFrente = inventory.filter(i => i.locationId === frenteId).reduce((s,i)=>s+i.quantity,0);
+
+        const cls = (qty) => qty > 0 ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
+
+        return `
           <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
-            <div class="font-bold text-gray-700 border-b pb-1 text-lg">\${loc}</div>
-            <div data-location-id="\${fundoId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold \${cls(itemsFundo)}">FUNDO \${itemsFundo.length ? \`(\${itemsFundo.length})\` : ''}</div>
-            <div data-location-id="\${frenteId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold \${cls(itemsFrente)}">FRENTE \${itemsFrente.length ? \`(\${itemsFrente.length})\` : ''}</div>
-          </div>\`;
+            <div class="font-bold text-gray-700 border-b pb-1 text-lg">${loc}</div>
+            <div id="map-cell-${fundoId}" data-location-id="${fundoId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${cls(qtyFundo)}">
+              FUNDO ${qtyFundo > 0 ? `(${qtyFundo})` : ''}
+            </div>
+            <div id="map-cell-${frenteId}" data-location-id="${frenteId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${cls(qtyFrente)}">
+              FRENTE ${qtyFrente > 0 ? `(${qtyFrente})` : ''}
+            </div>
+          </div>
+        `;
       }).join('');
 
-      container.innerHTML = \`
+      container.innerHTML = `
         <h1 class="text-3xl font-bold mb-2">Mapa do Estoque</h1>
         <p class="text-gray-600 mb-4">Use os filtros ou a busca livre. As posições que contêm o produto selecionado ficam destacadas.</p>
-        \${filtersHtml}
-        <div id="map-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">\${locationsHtml}</div>
-        <p id="map-empty" class="hidden mt-4 text-sm text-gray-600">Nenhuma posição atende aos filtros atuais.</p>\`;
+        ${filtersHtml}
+        <div id="map-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">${locationsHtml}</div>
+        <p id="map-empty" class="hidden mt-4 text-sm text-gray-600">Nenhuma posição atende aos filtros atuais.</p>
+      `;
 
       document.querySelectorAll('.map-card-position').forEach(cell => {
         cell.addEventListener('click', () => {
-          const locationId = cell.dataset.locationId || cell.getAttribute('data-location-id');
+          const locationId = cell.dataset.locationId;
           const items = inventory.filter(i => i.locationId === locationId);
           showMapCellModal(locationId, items);
         });
@@ -440,7 +689,6 @@
 
         const hasActiveFilter = !!(mapFilters.modelo || mapFilters.grade || mapFilters.variacao);
         const term = (searchInput.value || '').toLowerCase().trim();
-
         const cellMatches = (locationId) => {
           const items = inventory.filter(i => i.locationId === locationId);
           return items.some(it => {
@@ -453,9 +701,11 @@
 
         let matchesCount = 0;
         cards.forEach(cell => {
-          const locationId = cell.dataset.locationId || cell.getAttribute('data-location-id');
-          if (cellMatches(locationId)) { cell.classList.add('ring-4','ring-yellow-400'); matchesCount++; }
-          else {
+          const locationId = cell.dataset.locationId;
+          if (cellMatches(locationId)) {
+            cell.classList.add('ring-4','ring-yellow-400');
+            matchesCount++;
+          } else {
             const parent = cell.parentElement;
             const siblingId = locationId.endsWith('FUNDO') ? locationId.replace('FUNDO','FRENTE') : locationId.replace('FRENTE','FUNDO');
             if (!cellMatches(siblingId)) parent.classList.add('opacity-25');
@@ -464,11 +714,16 @@
         document.getElementById('map-empty').classList.toggle('hidden', matchesCount > 0);
       };
 
-      modeloSel.addEventListener('change', () => { mapFilters.modelo = modeloSel.value; mapFilters.grade=''; mapFilters.variacao=''; populateGrades(); resetSelect(variacaoSel,'Todas',true); applyMapHighlight(); });
+      modeloSel.addEventListener('change', () => {
+        mapFilters.modelo = modeloSel.value; mapFilters.grade=''; mapFilters.variacao='';
+        populateGrades(); resetSelect(variacaoSel, 'Todas', true); applyMapHighlight();
+      });
       gradeSel.addEventListener('change', () => { mapFilters.grade = gradeSel.value; mapFilters.variacao=''; populateVariacoes(); applyMapHighlight(); });
       variacaoSel.addEventListener('change', () => { mapFilters.variacao = variacaoSel.value; applyMapHighlight(); });
       searchInput.addEventListener('input', applyMapHighlight);
-      clearBtn.addEventListener('click', () => { mapFilters = { modelo:'', grade:'', variacao:'' }; modeloSel.value=''; resetSelect(gradeSel,'Todas',true); resetSelect(variacaoSel,'Todas',true); searchInput.value=''; applyMapHighlight(); });
+      clearBtn.addEventListener('click', () => {
+        clearMapFilters(); modeloSel.value=''; resetSelect(gradeSel,'Todas',true); resetSelect(variacaoSel,'Todas',true); searchInput.value=''; applyMapHighlight();
+      });
 
       applyMapHighlight();
     };
@@ -479,23 +734,24 @@
       const grades = [...new Set(productList.map(p => p.grade))].sort();
       const materiais = [...new Set(productList.map(p => p.material))].sort();
 
-      container.innerHTML = \`
+      container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Gerador de Relatórios</h1>
         <div class="bg-white p-6 rounded-lg shadow-md">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div><label class="block text-sm font-medium text-gray-700">Modelo (múltiplo)</label>
-              <select id="filter-modelo" multiple size="6" class="mt-1 block w-full p-2 border rounded-md">
-                \${modelos.map(m=>\`<option value="\${m}">\${m}</option>\`).join('')}
-              </select><p class="text-xs text-gray-500 mt-1">Ctrl/Cmd para múltiplos.</p>
+              <select id="filter-modelo" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Ctrl/Cmd para múltiplos.</p>
             </div>
             <div><label class="block text-sm font-medium text-gray-700">Grade (múltiplo)</label>
-              <select id="filter-grade" multiple size="4" class="mt-1 block w-full p-2 border rounded-md">
-                \${grades.map(g=>\`<option value="\${g}">\${g}</option>\`).join('')}
+              <select id="filter-grade" multiple size="4" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                ${grades.map(g=>`<option value="${g}">${g}</option>`).join('')}
               </select>
             </div>
             <div><label class="block text-sm font-medium text-gray-700">Material (múltiplo)</label>
-              <select id="filter-material" multiple size="6" class="mt-1 block w-full p-2 border rounded-md">
-                \${materiais.map(m=>\`<option value="\${m}">\${m}</option>\`).join('')}
+              <select id="filter-material" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                ${materiais.map(m=>`<option value="${m}">${m}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -505,7 +761,8 @@
             <button id="export-csv-btn" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 disabled:opacity-50" disabled>Exportar CSV</button>
           </div>
           <div id="report-result" class="mt-6"></div>
-        </div>\`;
+        </div>
+      `;
       document.getElementById('generate-report-btn').addEventListener('click', generateReport);
 
       const printBtn = document.getElementById('print-report-btn');
@@ -514,9 +771,9 @@
       printBtn.addEventListener('click', () => {
         const html = document.getElementById('report-result').innerHTML;
         const w = window.open('', '_blank');
-        w.document.write(\`<html><head><meta charset="utf-8"/><title>Relatório</title>
+        w.document.write(`<html><head><meta charset="utf-8"/><title>Relatório</title>
           <style>body{font-family:Inter,Arial,sans-serif;padding:16px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;font-size:14px;}th{background:#f8f8f8;text-transform:uppercase;letter-spacing:.04em;}</style>
-          </head><body>\${html}</body></html>\`);
+          </head><body>${html}</body></html>`);
         w.document.close(); w.focus(); w.print(); w.close();
       });
 
@@ -528,56 +785,61 @@
         const csv = [header, ...rows].map(r => r.map(v => `"${v.replaceAll('"','""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href=url; a.download=\`relatorio-estoque-\${new Date().toISOString().slice(0,10)}.csv\`;
+        const a = document.createElement('a'); a.href=url; a.download=`relatorio-estoque-${new Date().toISOString().slice(0,10)}.csv`;
         document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
       });
     };
 
     const renderHistory = () => {
       const container = document.getElementById('page-historico');
-      container.innerHTML = \`
+      container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Histórico de Movimentações</h1>
         <div class="bg-white rounded-lg shadow-md overflow-hidden">
           <ul class="divide-y divide-gray-200">
-            \${history.map(h=>\`
+            ${history.map(h=>`
               <li class="p-4">
                 <div class="flex items-center justify-between">
-                  <span class="font-semibold text-lg \${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">\${h.type}</span>
-                  <span class="text-sm text-gray-500">\${new Date(h.date).toLocaleString('pt-BR')}</span>
+                  <span class="font-semibold text-lg ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
+                  <span class="text-sm text-gray-500">${new Date(h.date).toLocaleString('pt-BR')}</span>
                 </div>
-                <p class="mt-2 text-gray-700">\${h.details}</p>
-              </li>\`).join('')}
+                <p class="mt-2 text-gray-700">${h.details}</p>
+              </li>
+            `).join('')}
           </ul>
-        </div>\`;
+        </div>
+      `;
     };
 
     const renderAdmin = () => {
       const container = document.getElementById('page-admin');
-      if (!adminAuthenticated) { showAdminLoginModal(); container.innerHTML = `<p class="text-center text-gray-600">Autentique-se para acessar o painel de administração.</p>`; return; }
-      container.innerHTML = \`
+      if (!adminAuthenticated) { showAdminLoginModal(); container.innerHTML = `<p class="text-center text-gray-600">Por favor, autentique-se para acessar o painel de administração.</p>`; return; }
+      container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Painel de Administração</h1>
         <div class="space-y-6">
           <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
             <h2 class="text-xl font-bold mb-2">Ações Reversíveis</h2>
             <p class="text-gray-600 mb-4">Cuidado: afeta o histórico.</p>
-            <button id="undo-last-action-btn" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 \${history.length ? '' : 'opacity-50 cursor-not-allowed'}" \${history.length ? '' : 'disabled'}>Desfazer Última Ação</button>
+            <button id="undo-last-action-btn" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 ${history.length ? '' : 'opacity-50 cursor-not-allowed'}" ${history.length ? '' : 'disabled'}>Desfazer Última Ação</button>
           </div>
           <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-red-500">
             <h2 class="text-xl font-bold mb-2">Ações Perigosas</h2>
             <p class="text-gray-600 mb-4">Irreversíveis e apagam dados permanentemente.</p>
             <button id="reset-stock-btn" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">Resetar Estoque Completo</button>
           </div>
-        </div>\`;
+        </div>
+      `;
       document.getElementById('undo-last-action-btn')?.addEventListener('click', handleUndoLastAction);
       document.getElementById('reset-stock-btn')?.addEventListener('click', handleResetStock);
     };
 
-    // --- Lógica de formulários ---
+    // --- LÓGICA ---
+
     function setupEntradaFormListeners() {
       const modeloSelect = document.getElementById('entrada-modelo');
       const gradeSelect = document.getElementById('entrada-grade');
       const materialSelect = document.getElementById('entrada-material');
       const variacaoSelect = document.getElementById('entrada-variacao');
+
       const resetSelect = (el, ph='--') => { el.innerHTML = `<option value="">${ph}</option>`; el.disabled = true; };
 
       modeloSelect.addEventListener('change', () => {
@@ -599,7 +861,7 @@
         variacaoSelect.disabled = false;
       });
 
-      document.getElementById('entrada-form').addEventListener('submit', async (e) => {
+      document.getElementById('entrada-form').addEventListener('submit', (e) => {
         e.preventDefault();
         const modelo = modeloSelect.value;
         const grade = gradeSelect.value;
@@ -611,9 +873,15 @@
         const product = productList.find(p => p.modelo===modelo && p.grade===grade && p.material===material && p.variacao===variacao);
         if (!product) return showToast('Produto não encontrado.', 'error');
 
-        await apiPost("/api/entrada", { locationId: location, productId: product.id, quantity: qty, productName: product.nomeCompleto });
-        await syncFromServer();
-        showToast('Entrada registrada com sucesso!'); goTo('#mapa');
+        const idx = inventory.findIndex(i => i.locationId===location && i.productId===product.id);
+        if (idx > -1) { inventory[idx].quantity += qty; }
+        else { inventory.push({ locationId: location, productId: product.id, quantity: qty }); }
+
+        addHistory('ENTRADA', `+${qty} caixas de ${product.nomeCompleto} em ${location}`);
+        persist(); // <-- salvar online
+        showToast('Entrada registrada com sucesso!');
+        preselectedLocation = null; // limpa pré-seleção
+        goTo('#mapa');
       });
     }
 
@@ -622,136 +890,37 @@
       const qtdInput = document.getElementById('saida-quantidade');
 
       const setMax = () => {
-        const id = parseInt(itemSelect.value);
-        const it = inventory.find(x => x.id === id);
-        if (!it) { qtdInput.placeholder='Máx: 0'; qtdInput.max=0; return; }
-        qtdInput.placeholder = \`Máx: \${it.quantity}\`; qtdInput.max = it.quantity;
+        const idx = parseInt(itemSelect.value);
+        if (Number.isNaN(idx)) { qtdInput.placeholder='Máx: 0'; qtdInput.max=0; return; }
+        const it = inventory[idx]; if (it) { qtdInput.placeholder=`Máx: ${it.quantity}`; qtdInput.max=it.quantity; }
       };
       itemSelect.addEventListener('change', setMax); setMax();
 
-      document.getElementById('saida-form').addEventListener('submit', async (e) => {
+      document.getElementById('saida-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        const inventoryId = parseInt(itemSelect.value, 10);
-        const qty = parseInt(qtdInput.value, 10);
-        if (!inventoryId || !qty) return;
+        const idx = parseInt(itemSelect.value);
+        const qty = parseInt(qtdInput.value);
+        if (Number.isNaN(idx) || !inventory[idx]) return;
 
-        await apiPost("/api/saida", { inventoryId, quantity: qty });
-        await syncFromServer();
-        showToast('Saída registrada com sucesso!'); goTo('#mapa');
+        const it = inventory[idx];
+        const p = productList.find(pp=>pp.id===it.productId);
+        if (qty > it.quantity) return showToast('A quantidade de saída não pode ser maior que a quantidade em estoque.', 'error');
+
+        if (qty === it.quantity) { inventory.splice(idx,1); addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId} (estoque zerado)`); }
+        else { it.quantity -= qty; addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId}`); }
+
+        persist(); // <-- salvar online
+        showToast('Saída registrada com sucesso!');
+        goTo('#mapa');
       });
     }
 
-    const addHistoryLocal = (type, details) => { history.unshift({ date: new Date().toISOString(), type, details }); };
+    const addHistory = (type, details) => { history.unshift({ date: new Date().toISOString(), type, details }); };
 
-    const handleUndoLastAction = () => {
-      showCustomConfirm('Tem certeza que deseja desfazer a última ação? (simulação apenas)', async () => {
-        if (history.length) {
-          const last = history.shift();
-          showToast(\`Ação "\${last.type}" desfeita (simulação).\`);
-          rerenderCurrentPage();
-        }
-      });
+    const handleMapSearch = (e) => {
+      // (mantido por compatibilidade, não usado diretamente — a busca agora fica dentro do renderMap)
     };
 
-    const handleResetStock = () => {
-      showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', async () => {
-        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
-          await apiPost("/api/reset", {});
-          await syncFromServer();
-          showToast('Estoque resetado com sucesso.', 'error');
-          rerenderCurrentPage();
-        });
-      });
-    };
-
-    // --- Modais / Toast ---
-    const showModal = (content) => {
-      const mc = document.getElementById('modal-container');
-      mc.innerHTML = `<div class="modal-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto relative" id="modal-content">${content}</div>
-      </div>`;
-      mc.classList.remove('hidden');
-      mc.querySelector('.modal-backdrop').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
-    };
-    const closeModal = () => { const mc = document.getElementById('modal-container'); mc.classList.add('hidden'); mc.innerHTML=''; };
-    window.closeModal = closeModal;
-
-    const showMapCellModal = (locationId, items) => {
-      const filtered = items.filter(it => matchesMapFilter(productList.find(p => p.id === it.productId)));
-      const list = (mapFilters.modelo || mapFilters.grade || mapFilters.variacao) && filtered.length ? filtered : items;
-      let content;
-      if (list && list.length) {
-        const warn = (!filtered.length && (mapFilters.modelo || mapFilters.grade || mapFilters.variacao))
-          ? `<p class="text-xs text-gray-500 mb-2">* Não há itens que combinem com o filtro nesta posição. Exibindo todos.</p>` : '';
-        const lis = list.map(it => {
-          const p = productList.find(pp => pp.id === it.productId);
-          return `<li class="py-2 border-b last:border-b-0"><p class="font-semibold text-gray-800">${p?.nomeCompleto || it.productId}</p><p class="text-gray-600"><strong>Quantidade:</strong> ${it.quantity} caixas</p></li>`;
-        }).join('');
-        content = `
-          <div class="p-6">
-            <div class="flex justify-between items-start">
-              <h2 class="text-2xl font-bold mb-2">Posição: ${locationId}</h2>
-              <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 -mt-2 -mr-2">✕</button>
-            </div>
-            ${warn}
-            <ul class="divide-y">${lis}</ul>
-          </div>`;
-      } else {
-        content = `
-          <div class="p-6">
-            <div class="flex justify-between items-start">
-              <h2 class="text-2xl font-bold mb-4">Posição: ${locationId}</h2>
-              <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 -mt-2 -mr-2">✕</button>
-            </div>
-            <p class="text-gray-600 mb-4">Esta posição está livre.</p>
-            <a href="#entrada" class="block text-center w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700" onclick="closeModal()">Registrar Entrada Aqui</a>
-          </div>`;
-      }
-      showModal(content);
-    };
-
-    const showAdminLoginModal = () => {
-      const content = `
-        <form id="admin-login-form" class="p-6 space-y-4">
-          <h2 class="text-2xl font-bold">Acesso Restrito</h2>
-          <p class="text-sm text-gray-600">Insira a senha de administrador.</p>
-          <div><label class="block text-sm font-medium text-gray-700">Senha</label>
-            <input type="password" id="password" required class="mt-1 block w-full p-2 border rounded-md">
-          </div>
-          <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Entrar</button>
-        </form>`;
-      showModal(content);
-      document.getElementById('admin-login-form').addEventListener('submit', e => {
-        e.preventDefault();
-        const pw = document.getElementById('password').value;
-        if (pw === '123') { adminAuthenticated = true; closeModal(); renderAdmin(); }
-        else showToast('Senha incorreta!', 'error');
-      });
-    };
-
-    const showCustomConfirm = (msg, onConfirm) => {
-      const content = `
-        <div class="p-6">
-          <h3 class="text-lg font-bold mb-4">Confirmação Necessária</h3>
-          <p class="text-gray-700 mb-6">${msg}</p>
-          <div class="flex justify-end gap-3">
-            <button id="confirm-cancel" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Cancelar</button>
-            <button id="confirm-ok" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700">Confirmar</button>
-          </div>
-        </div>`;
-      showModal(content);
-      document.getElementById('confirm-ok').onclick = () => { closeModal(); onConfirm(); };
-      document.getElementById('confirm-cancel').onclick = closeModal;
-    };
-
-    const showToast = (message, type='success') => {
-      const toast = document.createElement('div');
-      toast.className = `fixed bottom-24 md:bottom-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg ${type==='error'?'bg-red-500':'bg-green-500'} z-50`;
-      toast.textContent = message; document.body.appendChild(toast);
-      setTimeout(()=>toast.remove(), 2500);
-    };
-
-    // --- Relatórios ---
     const generateReport = () => {
       const getMulti = (id) => Array.from(document.getElementById(id).selectedOptions).map(o => o.value);
       const modelosSel = getMulti('filter-modelo');
@@ -782,20 +951,160 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              ${rows.sort((a,b)=>a.product.nomeCompleto.localeCompare(b.product.nomeCompleto)).map(r=>`
-                <tr>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${r.product.nomeCompleto}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.locationId}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.quantity}</td>
-                </tr>`).join('')}
+              ${
+                rows.sort((a,b)=>a.product.nomeCompleto.localeCompare(b.product.nomeCompleto)).map(r=>`
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${r.product.nomeCompleto}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.locationId}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.quantity}</td>
+                  </tr>`).join('')
+              }
             </tbody>
           </table>
-        </div>`;
+        </div>
+      `;
       document.getElementById('print-report-btn').disabled = false;
       document.getElementById('export-csv-btn').disabled = false;
     };
 
-    // --- Navegação ---
+    const handleUndoLastAction = () => {
+      showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', () => {
+        if (history.length) {
+          const last = history.shift();
+          persist(); // <-- salvar alteração do histórico
+          showToast(`Ação "${last.type}" foi desfeita (simulação).`);
+          rerenderCurrentPage();
+        }
+      });
+    };
+
+    const handleResetStock = () => {
+      showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
+        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', () => {
+          inventory = [];
+          history = [];
+          addHistory('RESET','O estoque foi completamente zerado.');
+          persist(); // <-- salvar online
+          showToast('Estoque resetado com sucesso.', 'error');
+          rerenderCurrentPage();
+        });
+      });
+    };
+
+    // --- MODAL / TOAST / CONFIRM ---
+    const showModal = (content) => {
+      const mc = document.getElementById('modal-container');
+      mc.innerHTML = `<div class="modal-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto relative" id="modal-content">${content}</div>
+      </div>`;
+      mc.classList.remove('hidden');
+      mc.querySelector('.modal-backdrop').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+    };
+    const closeModal = () => { const mc = document.getElementById('modal-container'); mc.classList.add('hidden'); mc.innerHTML=''; };
+    window.closeModal = closeModal;
+
+    const showMapCellModal = (locationId, items) => {
+      const filtered = items.filter(it => matchesMapFilter(productList.find(p => p.id === it.productId)));
+      const list = (mapFilters.modelo || mapFilters.grade || mapFilters.variacao) && filtered.length ? filtered : items;
+
+      let content;
+      if (list && list.length) {
+        const warn = (!filtered.length && (mapFilters.modelo || mapFilters.grade || mapFilters.variacao))
+          ? `<p class="text-xs text-gray-500 mb-2">* Não há itens que combinem com o filtro nesta posição. Exibindo todos.</p>` : '';
+        const lis = list.map(it => {
+          const p = productList.find(pp => pp.id === it.productId);
+          return `<li class="py-2 border-b last:border-b-0"><p class="font-semibold text-gray-800">${p.nomeCompleto}</p><p class="text-gray-600"><strong>Quantidade:</strong> ${it.quantity} caixas</p></li>`;
+        }).join('');
+        content = `
+          <div class="p-6">
+            <div class="flex justify-between items-start">
+              <h2 class="text-2xl font-bold mb-2">Posição: ${locationId}</h2>
+              <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 -mt-2 -mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            ${warn}
+            <ul class="divide-y">${lis}</ul>
+          </div>`;
+      } else {
+        content = `
+          <div class="p-6">
+            <div class="flex justify-between items-start">
+              <h2 class="text-2xl font-bold mb-4">Posição: ${locationId}</h2>
+              <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 -mt-2 -mr-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-8 w-8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <p class="text-gray-600 mb-4">Esta posição está livre.</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <button id="map-add-here" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Adicionar aqui</button>
+              <button id="map-scan-here" class="w-full bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800">Ler código e adicionar</button>
+            </div>
+          </div>`;
+      }
+      showModal(content);
+
+      // ações quando posição está livre
+      const addBtn  = document.getElementById('map-add-here');
+      const scanBtn = document.getElementById('map-scan-here');
+      if (addBtn) addBtn.onclick = () => {
+        preselectedLocation = locationId;
+        closeModal();
+        window.location.hash = '#entrada';
+      };
+      if (scanBtn) scanBtn.onclick = () => {
+        preselectedLocation = locationId;
+        showScanModal(({product, quantity}) => {
+          closeModal();
+          window.location.hash = '#entrada';
+          // Preenchimento de produto/quantidade é feito no scanner da entrada.
+        });
+      };
+    };
+
+    const showAdminLoginModal = () => {
+      const content = `
+        <form id="admin-login-form" class="p-6 space-y-4">
+          <h2 class="text-2xl font-bold">Acesso Restrito</h2>
+          <p class="text-sm text-gray-600">Insira a senha de administrador.</p>
+          <div><label class="block text-sm font-medium text-gray-700">Senha</label>
+            <input type="password" id="password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+          </div>
+          <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Entrar</button>
+        </form>`;
+      showModal(content);
+      document.getElementById('admin-login-form').addEventListener('submit', e => {
+        e.preventDefault();
+        const pw = document.getElementById('password').value;
+        if (pw === adminPassword) { adminAuthenticated = true; closeModal(); renderAdmin(); }
+        else showToast('Senha incorreta!', 'error');
+      });
+    };
+
+    const showCustomConfirm = (msg, onConfirm) => {
+      const content = `
+        <div class="p-6">
+          <h3 class="text-lg font-bold mb-4">Confirmação Necessária</h3>
+          <p class="text-gray-700 mb-6">${msg}</p>
+          <div class="flex justify-end gap-3">
+            <button id="confirm-cancel" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Cancelar</button>
+            <button id="confirm-ok" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700">Confirmar</button>
+          </div>
+        </div>`;
+      showModal(content);
+      document.getElementById('confirm-ok').onclick = () => { closeModal(); onConfirm(); };
+      document.getElementById('confirm-cancel').onclick = closeModal;
+    };
+
+    const showToast = (message, type='success') => {
+      const toast = document.createElement('div');
+      toast.className = `fixed bottom-24 md:bottom-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg ${type==='error'?'bg-red-500':'bg-green-500'} z-50`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(()=>toast.remove(), 2500);
+    };
+
+    // --- NAVEGAÇÃO ---
     const goTo = (hash) => { const cur = window.location.hash || '#home'; if (cur === hash) rerenderCurrentPage(); else window.location.hash = hash; };
     const navigate = () => {
       const hash = window.location.hash || '#home';
@@ -816,22 +1125,17 @@
         case '#historico': title='Histórico'; renderHistory(); break;
         case '#admin': title='Admin'; renderAdmin(); break;
       }
-      const headerTitle = document.getElementById('header-title');
       if (headerTitle) headerTitle.textContent = title;
     };
 
+    window.addEventListener('hashchange', navigate);
     (async () => {
-      await syncFromServer();
-      window.addEventListener('hashchange', navigate);
-      navigate();
+      await loadFromServer(); // <-- busca do KV
+      navigate();             // só depois de carregar os dados
     })();
+
   });
-  // PWA register
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
-    });
-  }
   </script>
 </body>
 </html>
+

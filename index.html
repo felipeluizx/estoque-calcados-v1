@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Controle de Estoque - Indústria de Calçados</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Scanner QR / código de barras -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/dist/html5-qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; }
@@ -334,6 +336,87 @@ async function persist() {
       return true;
     };
 
+    // ======= SCANNER / QR (adição) =======
+    let preselectedLocation = null; // posição escolhida a partir do mapa
+
+    function parseScannedPayload(text) {
+      try {
+        const j = JSON.parse(text);
+        return {
+          productId: j.productId ?? null,
+          quantity: Number(j.quantity) || 0,
+          modelo: j.modelo || null,
+          grade: j.grade || null,
+          material: j.material || null,
+          variacao: j.variacao || null
+        };
+      } catch(_) {
+        if (text.includes('|')) {
+          const [pid, qty] = text.split('|');
+          return { productId: Number(pid) || null, quantity: Number(qty) || 0 };
+        }
+        if (text.includes(';')) {
+          const [modelo, grade, material, variacao, qty] = text.split(';').map(s=>s.trim());
+          return { productId: null, quantity: Number(qty)||0, modelo, grade, material, variacao };
+        }
+        const n = Number(text.trim());
+        if (!Number.isNaN(n)) return { productId: n, quantity: 0 };
+        return { productId: null, quantity: 0 };
+      }
+    }
+
+    function findProductFromScan(payload) {
+      if (payload.productId) {
+        return productList.find(p => p.id === payload.productId) || null;
+      }
+      if (payload.modelo && payload.grade && payload.material && payload.variacao) {
+        return productList.find(p =>
+          p.modelo === payload.modelo &&
+          p.grade === payload.grade &&
+          p.material === payload.material &&
+          p.variacao === payload.variacao
+        ) || null;
+      }
+      return null;
+    }
+
+    function showScanModal(onSuccess) {
+      const content = `
+        <div class="p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-bold">Ler código</h3>
+            <button class="text-gray-400 hover:text-gray-600" id="scan-close">✕</button>
+          </div>
+          <div id="reader" style="width:100%"></div>
+          <p class="text-xs text-gray-500 mt-3">Suporta QR e códigos comuns. Melhore a luz para leitura.</p>
+        </div>`;
+      showModal(content);
+
+      const reader = new Html5Qrcode("reader");
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      function cleanup() {
+        reader.stop().catch(()=>{}).finally(()=>reader.clear().catch(()=>{}));
+        closeModal();
+      }
+      document.getElementById('scan-close').onclick = cleanup;
+
+      reader.start(
+        { facingMode: "environment" },
+        config,
+        decodedText => {
+          const payload = parseScannedPayload(decodedText);
+          const product = findProductFromScan(payload);
+          const quantity = payload.quantity || 0;
+          cleanup();
+          if (!product) { showToast('Produto não encontrado para o código lido.', 'error'); return; }
+          onSuccess({ product, quantity });
+        },
+        _=>{}
+      ).catch(err => showToast('Erro ao acessar câmera: ' + err, 'error'));
+    }
+    // ======= FIM SCANNER =======
+
     // --- RENDERIZAÇÃO ---
     const renderDashboard = () => {
       const container = document.getElementById('page-home');
@@ -382,6 +465,10 @@ async function persist() {
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6 text-green-700">Registrar Entrada</h1>
         <form id="entrada-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
+          <div class="flex items-center justify-between">
+            <div class="font-medium text-gray-700">Preencher via código</div>
+            <button type="button" id="entrada-scan-btn" class="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-sm">Ler código</button>
+          </div>
           <div><label class="block text-sm font-medium text-gray-700">1. Modelo</label>
             <select id="entrada-modelo" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
               <option value="" disabled selected>Selecione o modelo</option>
@@ -415,6 +502,39 @@ async function persist() {
         </form>
       `;
       setupEntradaFormListeners();
+
+      // Pré-seleção da posição (vinda do mapa)
+      if (preselectedLocation) {
+        const sel = document.getElementById('entrada-location');
+        sel.value = preselectedLocation;
+        sel.disabled = true;
+      }
+
+      // Scanner na entrada
+      document.getElementById('entrada-scan-btn').addEventListener('click', () => {
+        showScanModal(({product, quantity}) => {
+          const modeloSelect   = document.getElementById('entrada-modelo');
+          const gradeSelect    = document.getElementById('entrada-grade');
+          const materialSelect = document.getElementById('entrada-material');
+          const variacaoSelect = document.getElementById('entrada-variacao');
+
+          modeloSelect.value = product.modelo;
+          modeloSelect.dispatchEvent(new Event('change'));
+          setTimeout(()=>{
+            gradeSelect.value = product.grade;
+            gradeSelect.dispatchEvent(new Event('change'));
+            setTimeout(()=>{
+              materialSelect.value = product.material;
+              materialSelect.dispatchEvent(new Event('change'));
+              setTimeout(()=>{
+                variacaoSelect.value = product.variacao;
+              },10);
+            },10);
+          },10);
+
+          if (quantity > 0) document.getElementById('entrada-quantidade').value = quantity;
+        });
+      });
     };
 
     const renderSaida = () => {
@@ -429,6 +549,10 @@ async function persist() {
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6 text-red-700">Registrar Saída</h1>
         <form id="saida-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
+          <div class="flex items-center justify-between">
+            <div class="font-medium text-gray-700">Preencher via código</div>
+            <button type="button" id="saida-scan-btn" class="bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-sm">Ler código</button>
+          </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">1. Item em Estoque</label>
             <select id="saida-item" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
@@ -448,12 +572,27 @@ async function persist() {
             <input type="number" id="saida-quantidade" required min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Máx: 0">
           </div>
           <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 font-bold text-lg flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-minus-circle h-6 w-6 mr-2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" class="h-6 w-6 mr-2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
             Confirmar Saída
           </button>
         </form>
       `;
       setupSaidaFormListeners();
+
+      // Scanner na saída
+      document.getElementById('saida-scan-btn').addEventListener('click', () => {
+        showScanModal(({product, quantity}) => {
+          const idx = inventory.findIndex(i => i.productId === product.id);
+          if (idx === -1) { showToast('Este produto não está no estoque.', 'error'); return; }
+          const sel = document.getElementById('saida-item');
+          sel.value = String(idx);
+          sel.dispatchEvent(new Event('change'));
+          if (quantity > 0) {
+            const max = inventory[idx].quantity;
+            document.getElementById('saida-quantidade').value = Math.min(quantity, max);
+          }
+        });
+      });
     };
 
     const renderMap = () => {
@@ -486,17 +625,25 @@ async function persist() {
         </div>
       `;
 
+      // === mapa exibindo TOTAL DE CAIXAS por posição ===
       const locationsHtml = mapLayout.locations.map(loc => {
         const fundoId = `${loc}-FUNDO`;
         const frenteId = `${loc}-FRENTE`;
-        const itemsFundo = inventory.filter(i => i.locationId === fundoId);   <!-- correção aqui -->
-        const itemsFrente = inventory.filter(i => i.locationId === frenteId);
-        const cls = (items) => items.length ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
+
+        const qtyFundo  = inventory.filter(i => i.locationId === fundoId).reduce((s,i)=>s+i.quantity,0);
+        const qtyFrente = inventory.filter(i => i.locationId === frenteId).reduce((s,i)=>s+i.quantity,0);
+
+        const cls = (qty) => qty > 0 ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
+
         return `
           <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
             <div class="font-bold text-gray-700 border-b pb-1 text-lg">${loc}</div>
-            <div id="map-cell-${fundoId}" data-location-id="${fundoId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${cls(itemsFundo)}">FUNDO ${itemsFundo.length ? `(${itemsFundo.length})` : ''}</div>
-            <div id="map-cell-${frenteId}" data-location-id="${frenteId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${cls(itemsFrente)}">FRENTE ${itemsFrente.length ? `(${itemsFrente.length})` : ''}</div>
+            <div id="map-cell-${fundoId}" data-location-id="${fundoId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${cls(qtyFundo)}">
+              FUNDO ${qtyFundo > 0 ? `(${qtyFundo})` : ''}
+            </div>
+            <div id="map-cell-${frenteId}" data-location-id="${frenteId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${cls(qtyFrente)}">
+              FRENTE ${qtyFrente > 0 ? `(${qtyFrente})` : ''}
+            </div>
           </div>
         `;
       }).join('');
@@ -733,6 +880,7 @@ async function persist() {
         addHistory('ENTRADA', `+${qty} caixas de ${product.nomeCompleto} em ${location}`);
         persist(); // <-- salvar online
         showToast('Entrada registrada com sucesso!');
+        preselectedLocation = null; // limpa pré-seleção
         goTo('#mapa');
       });
     }
@@ -888,10 +1036,30 @@ async function persist() {
               </button>
             </div>
             <p class="text-gray-600 mb-4">Esta posição está livre.</p>
-            <a href="#entrada" class="block text-center w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700" onclick="closeModal()">Registrar Entrada Aqui</a>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <button id="map-add-here" class="w-full bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">Adicionar aqui</button>
+              <button id="map-scan-here" class="w-full bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800">Ler código e adicionar</button>
+            </div>
           </div>`;
       }
       showModal(content);
+
+      // ações quando posição está livre
+      const addBtn  = document.getElementById('map-add-here');
+      const scanBtn = document.getElementById('map-scan-here');
+      if (addBtn) addBtn.onclick = () => {
+        preselectedLocation = locationId;
+        closeModal();
+        window.location.hash = '#entrada';
+      };
+      if (scanBtn) scanBtn.onclick = () => {
+        preselectedLocation = locationId;
+        showScanModal(({product, quantity}) => {
+          closeModal();
+          window.location.hash = '#entrada';
+          // Preenchimento de produto/quantidade é feito no scanner da entrada.
+        });
+      };
     };
 
     const showAdminLoginModal = () => {

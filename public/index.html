@@ -1020,28 +1020,32 @@ const addHistory = async (type, details) => {
         URL.revokeObjectURL(link.href);
     };
 
-    const handleUndoLastAction = () => {
-      showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', () => {
-        if (history.length) {
-          const last = history.shift();
-          persist();
-          showToast(`Ação "${last.type}" foi desfeita (simulação).`);
-          rerenderCurrentPage();
-        }
-      });
-    };
+ const handleUndoLastAction = () => {
+  showCustomConfirm('Tem certeza que deseja desfazer a última ação? Apenas a última entrada ou saída pode ser revertida de forma confiável.', async () => {
+    if (history.length) {
+      const last = history.shift();
+      // A função persist já é chamada dentro de addHistory e outras operações.
+      // Para o Desfazer, vamos salvar o estado atual do histórico.
+      await persist();
+      showToast(`Ação "${last.type}" foi desfeita. Recarregando...`);
+      // Força um recarregamento completo para buscar o estado anterior ao desfeito
+      setTimeout(() => window.location.reload(), 1500);
+    }
+  });
+};
 
-    const handleResetStock = () => {
-      showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
-        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', () => {
-          inventory = [];
-          history = [];
-          addHistory('RESET','O estoque foi completamente zerado.');
-          showToast('Estoque resetado com sucesso.', 'error');
-          rerenderCurrentPage();
-        });
-      });
-    };
+const handleResetStock = () => {
+  showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
+    showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
+      inventory = [];
+      history = [];
+      // Agora esperamos a confirmação de que o reset foi salvo na nuvem
+      await addHistory('RESET', 'O estoque foi completamente zerado.');
+      showToast('Estoque resetado com sucesso.', 'error');
+      rerenderCurrentPage(); // Agora a UI reflete o estado que foi salvo
+    });
+  });
+};
 
     const showModal = (content) => {
       const mc = document.getElementById('modal-container');

@@ -25,7 +25,7 @@ export const onRequestGet = async ({ request, env }) => {
     const kv = assertKV(env);
     const url = new URL(request.url);
 
-    // Diagnóstico rápido: /api/estoque?op=ping
+    // Diagnóstico: /api/estoque?op=ping
     if (url.searchParams.get("op") === "ping") {
       const [v, inv, hist] = await Promise.all([
         kv.get("version"),
@@ -61,16 +61,40 @@ export const onRequestGet = async ({ request, env }) => {
 export const onRequestPost = async ({ request, env }) => {
   try {
     const kv = assertKV(env);
+    const url = new URL(request.url);
 
-    let payload;
-    try {
-      payload = await request.json();
-    } catch {
-      return json({ ok: false, error: "JSON inválido" }, 400);
+    // --- Suporte a reset por query: /api/estoque?op=reset ---
+    const queryReset = url.searchParams.get("op") === "reset";
+
+    let payload = {};
+    if (request.headers.get("content-type")?.includes("application/json")) {
+      try { payload = await request.json(); } catch { /* deixa vazio */ }
     }
 
+    const wantsReset =
+      queryReset ||
+      payload.reset === true ||
+      (typeof payload.action === "string" && payload.action.toUpperCase() === "RESET") ||
+      (typeof payload.type === "string"   && payload.type.toUpperCase()   === "RESET");
+
+    if (wantsReset) {
+      const resetHistory = [{
+        date: new Date().toISOString(),
+        type: "RESET",
+        details: "O estoque foi completamente zerado."
+      }];
+      const now = Date.now().toString();
+      await Promise.all([
+        kv.put("inventory", JSON.stringify([])),
+        kv.put("history",   JSON.stringify(resetHistory)),
+        kv.put("version",   now),
+      ]);
+      return json({ ok: true, reset: true, savedAt: now, version: now, inventory: [], history: resetHistory });
+    }
+
+    // --- Fluxo normal: requer {inventory, history} ---
     if (!("inventory" in payload) || !("history" in payload)) {
-      return json({ ok: false, error: "Payload deve conter {inventory, history}" }, 400);
+      return json({ ok: false, error: "Payload deve conter {inventory, history} ou usar ?op=reset / {reset:true}" }, 400);
     }
 
     const inventory = Array.isArray(payload.inventory) ? payload.inventory : [];

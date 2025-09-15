@@ -63,12 +63,12 @@ export const onRequestPost = async ({ request, env }) => {
     const kv = assertKV(env);
     const url = new URL(request.url);
 
-    // --- Suporte a reset por query: /api/estoque?op=reset ---
+    // --- Suporte a reset ---
     const queryReset = url.searchParams.get("op") === "reset";
 
     let payload = {};
     if (request.headers.get("content-type")?.includes("application/json")) {
-      try { payload = await request.json(); } catch { /* deixa vazio */ }
+      try { payload = await request.json(); } catch { /* ignora erro de parse */ }
     }
 
     const wantsReset =
@@ -89,12 +89,22 @@ export const onRequestPost = async ({ request, env }) => {
         kv.put("history",   JSON.stringify(resetHistory)),
         kv.put("version",   now),
       ]);
-      return json({ ok: true, reset: true, savedAt: now, version: now, inventory: [], history: resetHistory });
+      return json({
+        ok: true,
+        reset: true,
+        savedAt: now,
+        version: now,
+        inventory: [],
+        history: resetHistory
+      });
     }
 
     // --- Fluxo normal: requer {inventory, history} ---
     if (!("inventory" in payload) || !("history" in payload)) {
-      return json({ ok: false, error: "Payload deve conter {inventory, history} ou usar ?op=reset / {reset:true}" }, 400);
+      return json({
+        ok: false,
+        error: "Payload deve conter {inventory, history} ou usar ?op=reset / {reset:true}"
+      }, 400);
     }
 
     const inventory = Array.isArray(payload.inventory) ? payload.inventory : [];

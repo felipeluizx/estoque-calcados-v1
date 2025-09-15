@@ -315,14 +315,60 @@
       { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
     ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
 
-    // --- DADOS LOCAIS ---
-    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-    let history = JSON.parse(localStorage.getItem('history')) || [];
+    // --- DADOS DO SISTEMA (AGORA CENTRALIZADOS) ---
+const WORKER_URL = 'https://estoque-calcados-v1.pages.dev/'; // <-- MUITO IMPORTANTE: TROQUE PELA URL DO SEU WORKER!
 
-    const persist = () => {
-        localStorage.setItem('inventory', JSON.stringify(inventory));
-        localStorage.setItem('history', JSON.stringify(history));
-    };
+let inventory = [];
+let history = [];
+
+// Nova função para salvar os dados no Cloudflare KV via Worker
+const persist = async () => {
+    try {
+        const response = await fetch(WORKER_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inventory, history })
+        });
+
+        if (!response.ok) {
+            throw new Error('Falha ao sincronizar com o servidor.');
+        }
+    } catch (error) {
+        console.error('Erro de sincronização:', error);
+        showToast('Erro ao sincronizar dados!', 'error');
+    }
+};
+
+// Função para carregar os dados do servidor quando a página abre
+const loadDataFromServer = async () => {
+    try {
+        showToast('Carregando estoque...', 'info');
+        const response = await fetch(WORKER_URL);
+        if (!response.ok) {
+            throw new Error('Não foi possível carregar os dados do estoque.');
+        }
+        const data = await response.json();
+        inventory = data.inventory || [];
+        history = data.history || [];
+        rerenderCurrentPage(); // Re-renderiza a página com os dados carregados
+    } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        showToast('Erro ao carregar o estoque!', 'error');
+    }
+};
+
+// Adicionando um tipo 'info' ao showToast para melhor feedback
+const showToast = (message, type='success') => {
+    const toast = document.createElement('div');
+    let bgColor = 'bg-green-500'; // success
+    if (type === 'error') bgColor = 'bg-red-500';
+    if (type === 'info') bgColor = 'bg-blue-500';
+
+    toast.className = `fixed bottom-24 md:bottom-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg ${bgColor} z-50`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(()=>toast.remove(), 2500);
+};
 
     const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
     const adminPassword = '123';
@@ -1167,7 +1213,9 @@
 
     window.addEventListener('hashchange', navigate);
     window.closeModal = closeModal;
-    
+
+    loadDataFromServer();
+
     navigate();
 
   });

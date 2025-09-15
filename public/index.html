@@ -315,14 +315,49 @@
       { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
     ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
 
-    // --- DADOS LOCAIS ---
-    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
-    let history = JSON.parse(localStorage.getItem('history')) || [];
+    // --- LÓGICA DE DADOS E SINCRONIZAÇÃO COM CLOUDFLARE KV ---
+    let inventory = [];
+    let history = [];
+    let isSyncing = false;
 
-    const persist = () => {
-        localStorage.setItem('inventory', JSON.stringify(inventory));
-        localStorage.setItem('history', JSON.stringify(history));
-    };
+    // Função para buscar dados do KV
+    async function loadFromServer() {
+        if (isSyncing) return;
+        isSyncing = true;
+        try {
+            const response = await fetch('/api/estoque'); // Endpoint da sua Worker Function
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            
+            const serverInventory = Array.isArray(data.inventory) ? data.inventory : [];
+            const serverHistory = Array.isArray(data.history) ? data.history : [];
+
+            // Compara para ver se há mudanças antes de atualizar e re-renderizar
+            if (JSON.stringify(inventory) !== JSON.stringify(serverInventory) || JSON.stringify(history) !== JSON.stringify(serverHistory)) {
+                inventory = serverInventory;
+                history = serverHistory;
+                rerenderCurrentPage();
+            }
+        } catch (error) {
+            console.error("Falha ao buscar dados do servidor:", error);
+        } finally {
+            isSyncing = false;
+        }
+    }
+
+    // Função para salvar dados no KV
+    async function persist() {
+        try {
+            await fetch('/api/estoque', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inventory, history }),
+            });
+        } catch (error) {
+            console.error("Falha ao persistir dados no servidor:", error);
+            showToast('Erro de conexão ao salvar.', 'error');
+        }
+    }
 
     const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
     const adminPassword = '123';
@@ -790,7 +825,7 @@
         variacaoSelect.disabled = false;
       });
 
-      document.getElementById('entrada-form').addEventListener('submit', (e) => {
+      document.getElementById('entrada-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const modelo = modeloSelect.value;
         const grade = gradeSelect.value;
@@ -811,6 +846,7 @@
         }
 
         addHistory('ENTRADA', `+${qty} caixas de ${product.nomeCompleto} em ${location}`);
+        await persist();
         showToast('Entrada registrada com sucesso!');
         preselectedLocation = null;
         goTo('#mapa');
@@ -847,7 +883,7 @@
       };
       itemSelect.addEventListener('change', setMax); setMax();
 
-      document.getElementById('saida-form').addEventListener('submit', (e) => {
+      document.getElementById('saida-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const idx = parseInt(itemSelect.value);
         const qty = parseInt(qtdInput.value);
@@ -855,18 +891,28 @@
 
         const it = inventory[idx];
         const p = productList.find(pp=>pp.id===it.productId);
-        if (qty > it.quantity) return showToast('A quantidade de saída não pode ser maior que a quantidade em estoque.', 'error');
+        if (qty > it.quantity) {
+            showToast('A quantidade de saída não pode ser maior que a em estoque.', 'error');
+            return;
+        }
 
-        if (qty === it.quantity) { inventory.splice(idx,1); addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId} (estoque zerado)`); }
-        else { it.quantity -= qty; addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId}`); }
+        if (qty === it.quantity) {
+            inventory.splice(idx,1);
+            addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId} (estoque zerado)`);
+        } else { 
+            it.quantity -= qty;
+            addHistory('SAÍDA', `-${qty} caixas de ${p.nomeCompleto} de ${it.locationId}`);
+        }
 
-        persist();
+        await persist();
         showToast('Saída registrada com sucesso!');
         goTo('#mapa');
       });
 
       document.getElementById('saida-scan-btn').addEventListener('click', () => {
         showScanModal(({product, quantity}) => {
+          // A lógica de scan para saída precisa encontrar o item exato (produto + localização)
+          // Isso pode ser complexo. Por enquanto, encontra o primeiro lote do produto.
           const idx = inventory.findIndex(i => i.productId === product.id);
           if (idx === -1) { showToast('Este produto não está no estoque.', 'error'); return; }
           const sel = document.getElementById('saida-item');
@@ -882,7 +928,6 @@
 
     const addHistory = (type, details) => {
         history.unshift({ date: new Date().toISOString(), type, details });
-        persist();
     };
 
     const generateReport = () => {
@@ -919,18 +964,18 @@
           <table class="min-w-full divide-y divide-gray-200" id="report-table">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localização</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localização</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
               ${
                 rows.sort((a,b)=>a.product.nomeCompleto.localeCompare(b.product.nomeCompleto)).map(r=>`
                   <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${r.product.nomeCompleto}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold">${r.quantity}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.locationId}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.quantity}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${r.product.nomeCompleto}</td>
                   </tr>`).join('')
               }
             </tbody>
@@ -949,7 +994,7 @@
             <style>
                 body { font-family: Inter, sans-serif; }
                 table { width: 100%; border-collapse: collapse; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
                 thead { background-color: #f2f2f2; }
             </style>
         </head><body>${tableHtml}</body></html>`);
@@ -976,22 +1021,25 @@
     };
 
     const handleUndoLastAction = () => {
-      showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', () => {
-        if (history.length) {
-          const last = history.shift();
-          persist();
-          showToast(`Ação "${last.type}" foi desfeita (simulação).`);
-          rerenderCurrentPage();
+      showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', async () => {
+        if (history.length > 1) { // Manter o registro de RESET inicial, se houver
+            history.shift();
+            // A lógica para reverter a ação no inventário seria complexa.
+            // Por simplicidade, apenas removemos o registro do histórico.
+            await persist();
+            showToast(`Última ação foi desfeita (no histórico).`);
+            rerenderCurrentPage();
         }
       });
     };
 
     const handleResetStock = () => {
       showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
-        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', () => {
+        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
           inventory = [];
           history = [];
-          addHistory('RESET','O estoque foi completamente zerado.');
+          addHistory('RESET','O estoque foi completamente zerado por um administrador.');
+          await persist();
           showToast('Estoque resetado com sucesso.', 'error');
           rerenderCurrentPage();
         });
@@ -1051,8 +1099,9 @@
             closeModal();
             goTo('#entrada');
         });
-        document.getElementById('map-scan-here')?.addEventListener('click', () => {
-            closeModal();
+        
+        document.getElementById('map-scan-here')?.addEventListener('click', async () => {
+            await closeModal(); // Garante que o modal do mapa feche antes de abrir o de scan
             showScanModal(({product, quantity}) => {
                 preselectedLocation = locationId;
                 goTo('#entrada');
@@ -1130,7 +1179,7 @@
       setTimeout(()=>toast.remove(), 2500);
     };
 
-    // --- NAVEGAÇÃO ---
+    // --- NAVEGAÇÃO E INICIALIZAÇÃO ---
     const goTo = (hash) => {
         if (window.location.hash === hash) {
             rerenderCurrentPage();
@@ -1168,10 +1217,14 @@
     window.addEventListener('hashchange', navigate);
     window.closeModal = closeModal;
     
-    navigate();
+    // Inicialização com sincronização
+    (async () => {
+        await loadFromServer(); // Carga inicial
+        navigate();
+        setInterval(loadFromServer, 3000); // Sincroniza a cada 3 segundos
+    })();
 
   });
   </script>
 </body>
 </html>
-

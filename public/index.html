@@ -345,19 +345,42 @@
         }
     }
 
-    // Função para salvar dados no KV
-    async function persist() {
-        try {
-            await fetch('/api/estoque', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ inventory, history }),
-            });
-        } catch (error) {
-            console.error("Falha ao persistir dados no servidor:", error);
-            showToast('Erro de conexão ao salvar.', 'error');
-        }
+// Função para salvar dados no KV (com guarda para RESET)
+async function persist() {
+  try {
+    // Se o estado local indica um reset, delega para /api/estoque?op=reset
+    const looksLikeReset =
+      Array.isArray(inventory) && inventory.length === 0 &&
+      Array.isArray(history) &&
+      history[0]?.type?.toUpperCase?.() === 'RESET';
+
+    if (looksLikeReset) {
+      const r = await fetch('/api/estoque?op=reset', { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok || !d?.ok) throw new Error(d?.error || r.statusText);
+
+      // sincroniza estado local com o snapshot do servidor
+      inventory = [];
+      history = d.history || history;
+      return d;
     }
+
+    // Fluxo normal
+    const res = await fetch('/api/estoque', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventory, history }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) throw new Error(data?.error || res.statusText);
+    return data;
+  } catch (error) {
+    console.error("Falha ao persistir dados no servidor:", error);
+    showToast('Erro de conexão ao salvar.', 'error');
+    throw error;
+  }
+}
+
 
     const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
     const adminPassword = '123';
@@ -1033,11 +1056,11 @@
       });
     };
 
-    const handleResetStock = () => {
+   const handleResetStock = () => {
   showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
     showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
       try {
-        // 1) Reset autoritativo no servidor (KV)
+        // Reset autoritativo no servidor (grava no KV)
         const res = await fetch('/api/estoque?op=reset', { method: 'POST' });
         const data = await res.json();
 
@@ -1046,7 +1069,7 @@
           return;
         }
 
-        // 2) Atualiza o estado local com o snapshot retornado
+        // Zera estado local e usa o histórico retornado pelo servidor
         inventory = [];
         history = data.history || [{
           date: new Date().toISOString(),
@@ -1054,15 +1077,14 @@
           details: 'O estoque foi completamente zerado.'
         }];
 
-        // 3) Re-render imediata + leitura do servidor para sincronizar geral
+        // Re-render e sincronização imediata
         rerenderCurrentPage();
         if (typeof loadFromServer === 'function') await loadFromServer();
 
-        // Mantive a cor/verbo igual ao que você já usava
         showToast('Estoque resetado com sucesso.', 'error');
       } catch (e) {
         console.error(e);
-        showToast('Erro inesperado ao resetar.', 'error');
+        showToast('Erro inesperado ao resetar o estoque.', 'error');
       }
     });
   });

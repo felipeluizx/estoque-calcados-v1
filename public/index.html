@@ -926,11 +926,10 @@ const showToast = (message, type='success') => {
       });
     }
 
-    const addHistory = (type, details) => {
-        history.unshift({ date: new Date().toISOString(), type, details });
-        persist();
-    };
-
+const addHistory = async (type, details) => {
+    history.unshift({ date: new Date().toISOString(), type, details });
+    await persist(); // A mudança crucial: espera o salvamento terminar.
+};
     const generateReport = () => {
       const getSelectedValues = (elementId) => Array.from(document.getElementById(elementId).selectedOptions).map(option => option.value);
       const modelosSel = getSelectedValues('filter-modelo');

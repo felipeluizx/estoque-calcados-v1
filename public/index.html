@@ -1034,17 +1034,40 @@
     };
 
     const handleResetStock = () => {
-      showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
-        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
-          inventory = [];
-          history = [];
-          addHistory('RESET','O estoque foi completamente zerado por um administrador.');
-          await persist();
-          showToast('Estoque resetado com sucesso.', 'error');
-          rerenderCurrentPage();
-        });
-      });
-    };
+  showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
+    showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
+      try {
+        // 1) Reset autoritativo no servidor (KV)
+        const res = await fetch('/api/estoque?op=reset', { method: 'POST' });
+        const data = await res.json();
+
+        if (!res.ok || !data?.ok) {
+          showToast('Falha ao resetar: ' + (data?.error || res.statusText), 'error');
+          return;
+        }
+
+        // 2) Atualiza o estado local com o snapshot retornado
+        inventory = [];
+        history = data.history || [{
+          date: new Date().toISOString(),
+          type: 'RESET',
+          details: 'O estoque foi completamente zerado.'
+        }];
+
+        // 3) Re-render imediata + leitura do servidor para sincronizar geral
+        rerenderCurrentPage();
+        if (typeof loadFromServer === 'function') await loadFromServer();
+
+        // Mantive a cor/verbo igual ao que você já usava
+        showToast('Estoque resetado com sucesso.', 'error');
+      } catch (e) {
+        console.error(e);
+        showToast('Erro inesperado ao resetar.', 'error');
+      }
+    });
+  });
+};
+
 
     const showModal = (content) => {
       const mc = document.getElementById('modal-container');

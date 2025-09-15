@@ -315,60 +315,14 @@
       { id: 167, modelo: "XL SUEDE", grade: "INFANTIL", material: "SINTÉTICO", variacao: "BRANCO" },
     ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
 
-    // --- DADOS DO SISTEMA (AGORA CENTRALIZADOS) ---
-const WORKER_URL = 'https://estoque-calcados-v1.pages.dev/'; // <-- MUITO IMPORTANTE: TROQUE PELA URL DO SEU WORKER!
+    // --- DADOS LOCAIS ---
+    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+    let history = JSON.parse(localStorage.getItem('history')) || [];
 
-let inventory = [];
-let history = [];
-
-// Nova função para salvar os dados no Cloudflare KV via Worker
-const persist = async () => {
-    try {
-        const response = await fetch(WORKER_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ inventory, history })
-        });
-
-        if (!response.ok) {
-            throw new Error('Falha ao sincronizar com o servidor.');
-        }
-    } catch (error) {
-        console.error('Erro de sincronização:', error);
-        showToast('Erro ao sincronizar dados!', 'error');
-    }
-};
-
-// Função para carregar os dados do servidor quando a página abre
-const loadDataFromServer = async () => {
-    try {
-        showToast('Carregando estoque...', 'info');
-        const response = await fetch(WORKER_URL);
-        if (!response.ok) {
-            throw new Error('Não foi possível carregar os dados do estoque.');
-        }
-        const data = await response.json();
-        inventory = data.inventory || [];
-        history = data.history || [];
-        rerenderCurrentPage(); // Re-renderiza a página com os dados carregados
-    } catch (error) {
-        console.error('Erro ao carregar dados:', error);
-        showToast('Erro ao carregar o estoque!', 'error');
-    }
-};
-
-// Adicionando um tipo 'info' ao showToast para melhor feedback
-const showToast = (message, type='success') => {
-    const toast = document.createElement('div');
-    let bgColor = 'bg-green-500'; // success
-    if (type === 'error') bgColor = 'bg-red-500';
-    if (type === 'info') bgColor = 'bg-blue-500';
-
-    toast.className = `fixed bottom-24 md:bottom-5 right-5 text-white px-6 py-3 rounded-lg shadow-lg ${bgColor} z-50`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-    setTimeout(()=>toast.remove(), 2500);
-};
+    const persist = () => {
+        localStorage.setItem('inventory', JSON.stringify(inventory));
+        localStorage.setItem('history', JSON.stringify(history));
+    };
 
     const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','FRENTE'] };
     const adminPassword = '123';
@@ -926,10 +880,11 @@ const showToast = (message, type='success') => {
       });
     }
 
-const addHistory = async (type, details) => {
-    history.unshift({ date: new Date().toISOString(), type, details });
-    await persist(); // A mudança crucial: espera o salvamento terminar.
-};
+    const addHistory = (type, details) => {
+        history.unshift({ date: new Date().toISOString(), type, details });
+        persist();
+    };
+
     const generateReport = () => {
       const getSelectedValues = (elementId) => Array.from(document.getElementById(elementId).selectedOptions).map(option => option.value);
       const modelosSel = getSelectedValues('filter-modelo');
@@ -1020,32 +975,28 @@ const addHistory = async (type, details) => {
         URL.revokeObjectURL(link.href);
     };
 
- const handleUndoLastAction = () => {
-  showCustomConfirm('Tem certeza que deseja desfazer a última ação? Apenas a última entrada ou saída pode ser revertida de forma confiável.', async () => {
-    if (history.length) {
-      const last = history.shift();
-      // A função persist já é chamada dentro de addHistory e outras operações.
-      // Para o Desfazer, vamos salvar o estado atual do histórico.
-      await persist();
-      showToast(`Ação "${last.type}" foi desfeita. Recarregando...`);
-      // Força um recarregamento completo para buscar o estado anterior ao desfeito
-      setTimeout(() => window.location.reload(), 1500);
-    }
-  });
-};
+    const handleUndoLastAction = () => {
+      showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', () => {
+        if (history.length) {
+          const last = history.shift();
+          persist();
+          showToast(`Ação "${last.type}" foi desfeita (simulação).`);
+          rerenderCurrentPage();
+        }
+      });
+    };
 
-const handleResetStock = () => {
-  showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
-    showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
-      inventory = [];
-      history = [];
-      // Agora esperamos a confirmação de que o reset foi salvo na nuvem
-      await addHistory('RESET', 'O estoque foi completamente zerado.');
-      showToast('Estoque resetado com sucesso.', 'error');
-      rerenderCurrentPage(); // Agora a UI reflete o estado que foi salvo
-    });
-  });
-};
+    const handleResetStock = () => {
+      showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
+        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', () => {
+          inventory = [];
+          history = [];
+          addHistory('RESET','O estoque foi completamente zerado.');
+          showToast('Estoque resetado com sucesso.', 'error');
+          rerenderCurrentPage();
+        });
+      });
+    };
 
     const showModal = (content) => {
       const mc = document.getElementById('modal-container');
@@ -1216,9 +1167,7 @@ const handleResetStock = () => {
 
     window.addEventListener('hashchange', navigate);
     window.closeModal = closeModal;
-
-    loadDataFromServer();
-
+    
     navigate();
 
   });

@@ -142,7 +142,7 @@
   <div id="modal-container" class="hidden"></div>
 
   <script>
-document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', () => {
 
     // --- DADOS DO SISTEMA ---
     const productList = [
@@ -329,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { id: 181, modelo: "CAMPUS", grade: "INFANTIL", material: "MESSI", variacao: "BRANCO PRETO" },
       { id: 182, modelo: "CAMPUS", grade: "INFANTIL", material: "MESSI", variacao: "PRETO BRANCO" },
     ].map(p => ({ ...p, nomeCompleto: `${p.modelo} ${p.grade} ${p.material} ${p.variacao}` }));
+
     // --- LÓGICA DE DADOS E SINCRONIZAÇÃO COM CLOUDFLARE KV ---
     let inventory = [];
     let history = [];
@@ -359,41 +360,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Função para salvar dados no KV (com guarda para RESET)
-    async function persist() {
-      try {
-        // Se o estado local indica um reset, delega para /api/estoque?op=reset
-        const looksLikeReset =
-          Array.isArray(inventory) && inventory.length === 0 &&
-          Array.isArray(history) &&
-          history[0]?.type?.toUpperCase?.() === 'RESET';
-        if (looksLikeReset) {
-          const r = await fetch('/api/estoque?op=reset', { method: 'POST' });
-          const d = await r.json();
-          if (!r.ok || !d?.ok) throw new Error(d?.error || r.statusText);
-          // sincroniza estado local com o snapshot do servidor
-          inventory = [];
-          history = d.history || history;
-          return d;
-        }
+// Função para salvar dados no KV (com guarda para RESET)
+async function persist() {
+  try {
+    // Se o estado local indica um reset, delega para /api/estoque?op=reset
+    const looksLikeReset =
+      Array.isArray(inventory) && inventory.length === 0 &&
+      Array.isArray(history) &&
+      history[0]?.type?.toUpperCase?.() === 'RESET';
 
-        // Fluxo normal
-        const res = await fetch('/api/estoque', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ inventory, history }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data?.ok) throw new Error(data?.error || res.statusText);
-        return data;
-      } catch (error) {
-        console.error("Falha ao persistir dados no servidor:", error);
-        showToast('Erro de conexão ao salvar.', 'error');
-        throw error;
-      }
+    if (looksLikeReset) {
+      const r = await fetch('/api/estoque?op=reset', { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok || !d?.ok) throw new Error(d?.error || r.statusText);
+
+      // sincroniza estado local com o snapshot do servidor
+      inventory = [];
+      history = d.history || history;
+      return d;
     }
 
-    const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO', 'MEIO', 'FRENTE'] };
+    // Fluxo normal
+    const res = await fetch('/api/estoque', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inventory, history }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data?.ok) throw new Error(data?.error || res.statusText);
+    return data;
+  } catch (error) {
+    console.error("Falha ao persistir dados no servidor:", error);
+    showToast('Erro de conexão ao salvar.', 'error');
+    throw error;
+  }
+}
+
+
+    const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','MEIO','FRENTE'] };
     const adminPassword = '123';
     let adminAuthenticated = false;
     let lastVisitedHash = '#home';
@@ -401,7 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const pages = document.querySelectorAll('.page');
     const menuItems = document.querySelectorAll('.menu-item');
     const headerTitle = document.getElementById('header-title');
-    
+
     // ======= SCANNER / QR (com bip + delay) =======
     let preselectedLocation = null;
     let activeScanner = null;
@@ -517,9 +521,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const html5Qrcode = new Html5Qrcode("reader");
       activeScanner = html5Qrcode;
       const config = { fps: 10, qrbox: { width: 250, height: 250 }, supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA] };
+      
       html5Qrcode.start({ facingMode: "environment" }, config, onScanSuccess, (errorMessage) => { /* ignore errors */ })
         .catch(err => showToast(`Erro na câmera: ${err}`, 'error'));
-      
+
       document.getElementById('scan-close').onclick = async () => {
           await stopActiveScanner();
           closeModal();
@@ -552,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <h3 class="text-xl font-bold mb-4">Movimentações Recentes</h3>
           <ul class="space-y-3">
             ${history.slice(0,5).map(h=>`
-               <li class="flex items-start">
+              <li class="flex items-start">
                 <span class="text-sm text-gray-500 w-28">${new Date(h.date).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>
                 <span class="font-semibold ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
                 <span class="ml-4 text-gray-700">${h.details}</span>
@@ -570,6 +575,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mapLayout.locations.forEach(loc => mapLayout.positions.forEach(pos => {
           allLocations.push(`${loc}-${pos}`);
       }));
+
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6 text-green-700">Registrar Entrada</h1>
         <form id="entrada-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
@@ -618,7 +624,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('entrada-location').value = preselectedLocation;
       }
     };
-    
+
     const renderSaida = () => {
       const container = document.getElementById('page-saida');
       if (!inventory.length) {
@@ -667,28 +673,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderMap = () => {
       const container = document.getElementById('page-mapa');
+      
       const locationsHtml = mapLayout.locations.map(loc => {
-        const positionsHtml = mapLayout.positions.map(pos => {
-          const positionId = `${loc}-${pos}`;
-          const itemsInPosition = inventory.filter(i => i.locationId === positionId);
-          const qtyInPosition = itemsInPosition.reduce((sum, item) => sum + item.quantity, 0);
+          const fundoId = `${loc}-FUNDO`;
+	  const meioId = `${loc}-MEIO`;
+          const frenteId = `${loc}-FRENTE`;
+          
+          const itemsFundo = inventory.filter(i => i.locationId === fundoId);
+          const itemsFrente = inventory.filter(i => i.locationId === frenteId);
+
+          const qtyFundo = itemsFundo.reduce((sum, item) => sum + item.quantity, 0);
+          const qtyFrente = itemsFrente.reduce((sum, item) => sum + item.quantity, 0);
+          
           const getPositionClass = (qty) => qty > 0 ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
-    
+          
           return `
-            <div id="map-cell-${positionId}" data-location-id="${positionId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${getPositionClass(qtyInPosition)}">
-              ${pos} ${qtyInPosition > 0 ? `(${qtyInPosition})` : ''}
-            </div>
+              <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
+                  <div class="font-bold text-gray-700 border-b pb-1 text-lg">${loc}</div>
+                  <div id="map-cell-${fundoId}" data-location-id="${fundoId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${getPositionClass(qtyFundo)}">
+                      FUNDO ${qtyFundo > 0 ? `(${qtyFundo})` : ''}
+                  <div id="map-cell-${meioId}" data-location-id="${meioId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${getPositionClass(qtyMeio)}">
+                      MEIO ${qtyMeio > 0 ? `(${qtyMeio})` : ''}
+                  </div>
+                  <div id="map-cell-${frenteId}" data-location-id="${frenteId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${getPositionClass(qtyFrente)}">
+                      FRENTE ${qtyFrente > 0 ? `(${qtyFrente})` : ''}
+                  </div>
+              </div>
           `;
-        }).join('');
-    
-        return `
-          <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
-            <div class="font-bold text-gray-700 border-b pb-1 text-lg">${loc}</div>
-            ${positionsHtml}
-          </div>
-        `;
       }).join('');
-    
+
       container.innerHTML = `
           <h1 class="text-3xl font-bold mb-2">Mapa do Estoque</h1>
           <p class="text-gray-600 mb-6">Clique em uma posição para ver detalhes ou use a busca para encontrar um produto.</p>
@@ -699,6 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
               ${locationsHtml}
           </div>
       `;
+
       document.querySelectorAll('.map-card-position').forEach(cell => {
           cell.addEventListener('click', () => {
               const locationId = cell.dataset.locationId;
@@ -706,6 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
               showMapCellModal(locationId, items);
           });
       });
+
       document.getElementById('map-search').addEventListener('input', (e) => {
           const searchTerm = e.target.value.toLowerCase();
           document.querySelectorAll('.map-card-position').forEach(cell => {
@@ -721,7 +736,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return product && product.nomeCompleto.toLowerCase().includes(searchTerm);
                   });
               });
-    
+
               if (searchTerm && !hasMatchInCard) {
                   parentCard.classList.add('opacity-25');
               } else if (searchTerm && hasMatchInCard) {
@@ -757,13 +772,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p class="text-xs text-gray-500 mt-1">Use Ctrl/Cmd para múltiplos.</p>
             </div>
             <div>
-               <label class="block text-sm font-medium text-gray-700">Grade</label>
+                <label class="block text-sm font-medium text-gray-700">Grade</label>
                 <select id="filter-grade" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                     ${grades.map(g=>`<option value="${g}">${g}</option>`).join('')}
                 </select>
             </div>
             <div>
-                 <label class="block text-sm font-medium text-gray-700">Material</label>
+                <label class="block text-sm font-medium text-gray-700">Material</label>
                 <select id="filter-material" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                     ${materiais.map(m=>`<option value="${m}">${m}</option>`).join('')}
                 </select>
@@ -791,7 +806,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ${history.map(h=>`
               <li class="p-4">
                 <div class="flex items-center justify-between">
-                   <span class="font-semibold text-lg ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
+                  <span class="font-semibold text-lg ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
                   <span class="text-sm text-gray-500">${new Date(h.date).toLocaleString('pt-BR')}</span>
                 </div>
                 <p class="mt-2 text-gray-700">${h.details}</p>
@@ -804,11 +819,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderAdmin = () => {
       const container = document.getElementById('page-admin');
-      if (!adminAuthenticated) { 
-        showAdminLoginModal();
-        container.innerHTML = `<p class="text-center text-gray-600">Por favor, autentique-se para acessar o painel de administração.</p>`; 
-        return;
-      }
+      if (!adminAuthenticated) { showAdminLoginModal(); container.innerHTML = `<p class="text-center text-gray-600">Por favor, autentique-se para acessar o painel de administração.</p>`; return; }
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Painel de Administração</h1>
         <div class="space-y-6">
@@ -834,28 +845,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const materialSelect = document.getElementById('entrada-material');
       const variacaoSelect = document.getElementById('entrada-variacao');
 
-      const resetSelect = (el, ph='--') => { 
-        el.innerHTML = `<option value="">${ph}</option>`;
-        el.disabled = true; 
-      };
+      const resetSelect = (el, ph='--') => { el.innerHTML = `<option value="">${ph}</option>`; el.disabled = true; };
 
       modeloSelect.addEventListener('change', () => {
-        resetSelect(gradeSelect,'Selecione a grade'); 
-        resetSelect(materialSelect); 
-        resetSelect(variacaoSelect);
+        resetSelect(gradeSelect,'Selecione a grade'); resetSelect(materialSelect); resetSelect(variacaoSelect);
         const grades = [...new Set(productList.filter(p => p.modelo === modeloSelect.value).map(p => p.grade))];
         gradeSelect.innerHTML = `<option value="" disabled selected>Selecione a grade</option>` + grades.sort().map(g=>`<option value="${g}">${g}</option>`).join('');
         gradeSelect.disabled = false;
       });
-
       gradeSelect.addEventListener('change', () => {
-        resetSelect(materialSelect,'Selecione o material'); 
-        resetSelect(variacaoSelect);
+        resetSelect(materialSelect,'Selecione o material'); resetSelect(variacaoSelect);
         const mats = [...new Set(productList.filter(p => p.modelo === modeloSelect.value && p.grade === gradeSelect.value).map(p => p.material))];
         materialSelect.innerHTML = `<option value="" disabled selected>Selecione o material</option>` + mats.sort().map(m=>`<option value="${m}">${m}</option>`).join('');
         materialSelect.disabled = false;
       });
-
       materialSelect.addEventListener('change', () => {
         resetSelect(variacaoSelect,'Selecione a variação');
         const vars = [...new Set(productList.filter(p => p.modelo === modeloSelect.value && p.grade === gradeSelect.value && p.material === materialSelect.value).map(p => p.variacao))];
@@ -905,7 +908,6 @@ document.addEventListener('DOMContentLoaded', () => {
               }, 50);
             }, 50);
           }, 50);
-      
           if (quantity > 0) document.getElementById('entrada-quantidade').value = quantity;
         });
       });
@@ -914,22 +916,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupSaidaFormListeners() {
       const itemSelect = document.getElementById('saida-item');
       const qtdInput = document.getElementById('saida-quantidade');
-      
+
       const setMax = () => {
         const idx = parseInt(itemSelect.value);
-        if (Number.isNaN(idx)) { 
-          qtdInput.placeholder='Máx: 0'; 
-          qtdInput.max=0; 
-          return; 
-        }
-        const it = inventory[idx];
-        if (it) { 
-          qtdInput.placeholder=`Máx: ${it.quantity}`; 
-          qtdInput.max=it.quantity; 
-        }
+        if (Number.isNaN(idx)) { qtdInput.placeholder='Máx: 0'; qtdInput.max=0; return; }
+        const it = inventory[idx]; if (it) { qtdInput.placeholder=`Máx: ${it.quantity}`; qtdInput.max=it.quantity; }
       };
-      itemSelect.addEventListener('change', setMax); 
-      setMax();
+      itemSelect.addEventListener('change', setMax); setMax();
 
       document.getElementById('saida-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -959,11 +952,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       document.getElementById('saida-scan-btn').addEventListener('click', () => {
         showScanModal(({product, quantity}) => {
+          // A lógica de scan para saída precisa encontrar o item exato (produto + localização)
+          // Isso pode ser complexo. Por enquanto, encontra o primeiro lote do produto.
           const idx = inventory.findIndex(i => i.productId === product.id);
-          if (idx === -1) { 
-            showToast('Este produto não está no estoque.', 'error'); 
-            return; 
-          }
+          if (idx === -1) { showToast('Este produto não está no estoque.', 'error'); return; }
           const sel = document.getElementById('saida-item');
           sel.value = String(idx);
           sel.dispatchEvent(new Event('change'));
@@ -984,7 +976,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const modelosSel = getSelectedValues('filter-modelo');
       const gradesSel = getSelectedValues('filter-grade');
       const materiaisSel = getSelectedValues('filter-material');
-      
+
       let rows = inventory.map(i => ({ ...i, product: productList.find(p => p.id === i.productId) }));
       
       if (modelosSel.length > 0) {
@@ -1000,7 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = document.getElementById('report-result');
       const printBtn = document.getElementById('print-report-btn');
       const exportBtn = document.getElementById('export-csv-btn');
-      
+
       if (!rows.length) {
         result.innerHTML = `<p class="text-gray-600 mt-4">Nenhum item encontrado com os filtros selecionados.</p>`;
         printBtn.disabled = true;
@@ -1071,8 +1063,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleUndoLastAction = () => {
       showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', async () => {
-        if (history.length > 1) { 
+        if (history.length > 1) { // Manter o registro de RESET inicial, se houver
             history.shift();
+            // A lógica para reverter a ação no inventário seria complexa.
+            // Por simplicidade, apenas removemos o registro do histórico.
             await persist();
             showToast(`Última ação foi desfeita (no histórico).`);
             rerenderCurrentPage();
@@ -1081,35 +1075,39 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
    const handleResetStock = () => {
-      showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
-        showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
-          try {
-            const res = await fetch('/api/estoque?op=reset', { method: 'POST' });
-            const data = await res.json();
+  showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
+    showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
+      try {
+        // Reset autoritativo no servidor (grava no KV)
+        const res = await fetch('/api/estoque?op=reset', { method: 'POST' });
+        const data = await res.json();
 
-            if (!res.ok || !data?.ok) {
-              showToast('Falha ao resetar: ' + (data?.error || res.statusText), 'error');
-              return;
-            }
+        if (!res.ok || !data?.ok) {
+          showToast('Falha ao resetar: ' + (data?.error || res.statusText), 'error');
+          return;
+        }
 
-            inventory = [];
-            history = data.history || [{
-              date: new Date().toISOString(),
-              type: 'RESET',
-              details: 'O estoque foi completamente zerado.'
-            }];
+        // Zera estado local e usa o histórico retornado pelo servidor
+        inventory = [];
+        history = data.history || [{
+          date: new Date().toISOString(),
+          type: 'RESET',
+          details: 'O estoque foi completamente zerado.'
+        }];
 
-            rerenderCurrentPage();
-            if (typeof loadFromServer === 'function') await loadFromServer();
+        // Re-render e sincronização imediata
+        rerenderCurrentPage();
+        if (typeof loadFromServer === 'function') await loadFromServer();
 
-            showToast('Estoque resetado com sucesso.', 'error');
-          } catch (e) {
-            console.error(e);
-            showToast('Erro inesperado ao resetar o estoque.', 'error');
-          }
-        });
-      });
-    };
+        showToast('Estoque resetado com sucesso.', 'error');
+      } catch (e) {
+        console.error(e);
+        showToast('Erro inesperado ao resetar o estoque.', 'error');
+      }
+    });
+  });
+};
+
 
     const showModal = (content) => {
       const mc = document.getElementById('modal-container');
@@ -1131,8 +1129,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let content;
         const hasItems = items && items.length > 0;
 
-        const itemsHtml = hasItems ?
-            `<ul class="divide-y divide-gray-200 -mx-6 px-6 mb-4 max-h-48 overflow-y-auto">
+        const itemsHtml = hasItems ? `
+            <ul class="divide-y divide-gray-200 -mx-6 px-6 mb-4 max-h-48 overflow-y-auto">
                 ${items.map(item => {
                     const product = productList.find(p => p.id === item.productId);
                     return `<li class="py-2">
@@ -1141,7 +1139,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </li>`;
                 }).join('')}
             </ul>` : '<p class="text-gray-600 mb-4">Esta posição está livre.</p>';
-        
+
         content = `
             <div class="p-6">
                 <div class="flex justify-between items-start">
@@ -1156,6 +1154,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button id="map-scan-here" class="w-full bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800">Ler e Adicionar</button>
                 </div>
             </div>`;
+        
         showModal(content);
 
         document.getElementById('map-add-here')?.addEventListener('click', () => {
@@ -1163,9 +1162,9 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal();
             goTo('#entrada');
         });
-
+        
         document.getElementById('map-scan-here')?.addEventListener('click', async () => {
-            await closeModal();
+            await closeModal(); // Garante que o modal do mapa feche antes de abrir o de scan
             showScanModal(({product, quantity}) => {
                 preselectedLocation = locationId;
                 goTo('#entrada');
@@ -1174,7 +1173,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const gradeSelect = document.getElementById('entrada-grade');
                     const materialSelect = document.getElementById('entrada-material');
                     const variacaoSelect = document.getElementById('entrada-variacao');
-          
                     modeloSelect.value = product.modelo;
                     modeloSelect.dispatchEvent(new Event('change'));
                     setTimeout(() => {
@@ -1212,11 +1210,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('admin-login-form').addEventListener('submit', e => {
         e.preventDefault();
         const pw = document.getElementById('password').value;
-        if (pw === adminPassword) { 
-          adminAuthenticated = true; 
-          closeModal(); 
-          renderAdmin(); 
-        }
+        if (pw === adminPassword) { adminAuthenticated = true; closeModal(); renderAdmin(); }
         else showToast('Senha incorreta!', 'error');
       });
       document.getElementById('admin-login-close').addEventListener('click', () => {
@@ -1292,9 +1286,8 @@ document.addEventListener('DOMContentLoaded', () => {
         navigate();
         setInterval(loadFromServer, 3000); // Sincroniza a cada 3 segundos
     })();
+
   });
+  </script>
 </body>
 </html>
-
-
-GOOGLE

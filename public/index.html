@@ -744,7 +744,7 @@ const renderMap = () => {
           });
       });
     };
-      
+     
       const populateSelect = (elementId, options, selectedValues) => {
       const select = document.getElementById(elementId);
       select.innerHTML = options.map(opt => 
@@ -755,13 +755,11 @@ const renderMap = () => {
     const updateReportFilters = () => {
       const getSelectedValues = (id) => Array.from(document.getElementById(id).selectedOptions).map(opt => opt.value);
 
-      // 1. Pega os valores atualmente selecionados em todos os filtros
       const selectedModelos = getSelectedValues('filter-modelo');
       const selectedGrades = getSelectedValues('filter-grade');
       const selectedMateriais = getSelectedValues('filter-material');
       const selectedVariacoes = getSelectedValues('filter-variacao');
 
-      // 2. Calcula as opções que ainda são possíveis após cada nível de filtro
       let listForGrades = productList;
       if(selectedModelos.length) listForGrades = listForGrades.filter(p => selectedModelos.includes(p.modelo));
       const availableGrades = [...new Set(listForGrades.map(p => p.grade))].sort();
@@ -774,16 +772,127 @@ const renderMap = () => {
       if(selectedMateriais.length) listForVariacoes = listForVariacoes.filter(p => selectedMateriais.includes(p.material));
       const availableVariacoes = [...new Set(listForVariacoes.map(p => p.variacao))].sort();
       
-      // A lista de modelos nunca muda, então recalculamos a partir da lista completa
       const availableModelos = [...new Set(productList.map(p => p.modelo))].sort();
 
-      // 4. Repopula cada select com as opções filtradas, mantendo as seleções
       populateSelect('filter-modelo', availableModelos, selectedModelos);
       populateSelect('filter-grade', availableGrades, selectedGrades);
       populateSelect('filter-material', availableMateriais, selectedMateriais);
       populateSelect('filter-variacao', availableVariacoes, selectedVariacoes);
     };
 
+    // (NOVA FUNÇÃO AUXILIAR) Pega os itens do inventário com base nos filtros da tela
+    const getFilteredReportRows = () => {
+      const getSelectedValues = (elementId) => Array.from(document.getElementById(elementId).selectedOptions).map(option => option.value);
+      const modelosSel = getSelectedValues('filter-modelo');
+      const gradesSel = getSelectedValues('filter-grade');
+      const materiaisSel = getSelectedValues('filter-material');
+      const variacoesSel = getSelectedValues('filter-variacao');
+      
+      let rows = inventory.map(i => ({ ...i, product: productList.find(p => p.id === i.productId) }));
+      
+      if (modelosSel.length > 0) rows = rows.filter(r => modelosSel.includes(r.product.modelo));
+      if (gradesSel.length > 0) rows = rows.filter(r => gradesSel.includes(r.product.grade));
+      if (materiaisSel.length > 0) rows = rows.filter(r => materiaisSel.includes(r.product.material));
+      if (variacoesSel.length > 0) rows = rows.filter(r => variacoesSel.includes(r.product.variacao));
+
+      return rows;
+    };
+
+    // (NOVA FUNÇÃO) Gera o relatório SIMPLES, agrupando as quantidades
+    const generateSummaryReport = () => {
+      const rows = getFilteredReportRows();
+      const result = document.getElementById('report-result');
+      const printBtn = document.getElementById('print-report-btn');
+      const exportBtn = document.getElementById('export-csv-btn');
+
+      if (!rows.length) {
+        result.innerHTML = `<p class="text-gray-600 mt-4">Nenhum item encontrado com os filtros selecionados.</p>`;
+        printBtn.disabled = true;
+        exportBtn.disabled = true;
+        return;
+      }
+
+      // Lógica para agrupar e somar as quantidades
+      const summary = rows.reduce((acc, item) => {
+        if (!acc[item.productId]) {
+          acc[item.productId] = {
+            product: item.product,
+            totalQuantity: 0,
+          };
+        }
+        acc[item.productId].totalQuantity += item.quantity;
+        return acc;
+      }, {});
+
+      const summaryRows = Object.values(summary).sort((a, b) => a.product.nomeCompleto.localeCompare(b.product.nomeCompleto));
+
+      result.innerHTML = `
+        <h3 class="text-xl font-semibold mb-2">Relatório Quantitativo</h3>
+        <div class="overflow-x-auto mt-4">
+          <table class="min-w-full divide-y divide-gray-200" id="report-table">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade Total</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              ${summaryRows.map(r => `
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${r.product.nomeCompleto}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold">${r.totalQuantity} caixas</td>
+                  </tr>`).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      `;
+      printBtn.disabled = false;
+      exportBtn.disabled = false;
+    };
+
+    // (FUNÇÃO RENOMEADA E AJUSTADA) Gera o relatório COMPLETO, com a localização
+    const generateDetailedReport = () => {
+      const rows = getFilteredReportRows();
+      const result = document.getElementById('report-result');
+      const printBtn = document.getElementById('print-report-btn');
+      const exportBtn = document.getElementById('export-csv-btn');
+      
+      if (!rows.length) {
+        result.innerHTML = `<p class="text-gray-600 mt-4">Nenhum item encontrado com os filtros selecionados.</p>`;
+        printBtn.disabled = true;
+        exportBtn.disabled = true;
+        return;
+      }
+
+      result.innerHTML = `
+        <h3 class="text-xl font-semibold mb-2">Relatório Detalhado</h3>
+        <div class="overflow-x-auto mt-4">
+          <table class="min-w-full divide-y divide-gray-200" id="report-table">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantidade</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Localização</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produto</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              ${rows.sort((a,b)=>a.product.nomeCompleto.localeCompare(b.product.nomeCompleto)).map(r=>`
+                  <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-bold">${r.quantity}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${r.locationId}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800">${r.product.nomeCompleto}</td>
+                  </tr>`).join('')
+              }
+            </tbody>
+          </table>
+        </div>
+      `;
+      printBtn.disabled = false;
+      exportBtn.disabled = false;
+    };
+
+    // (FUNÇÃO ATUALIZADA) Desenha a tela de relatórios com os dois novos botões
     const renderReports = () => {
       const container = document.getElementById('page-relatorios');
 
@@ -810,30 +919,30 @@ const renderMap = () => {
             </div>
           </div>
           <div class="flex flex-col md:flex-row gap-3">
-            <button id="generate-report-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold">Gerar Relatório</button>
-            <button id="print-report-btn" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold" disabled>Imprimir</button>
-            <button id="export-csv-btn" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-semibold" disabled>Exportar CSV</button>
+            <button id="generate-summary-report-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold">Gerar Quantitativo</button>
+            <button id="generate-detailed-report-btn" class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 font-semibold">Gerar Detalhado (com Local)</button>
+            <button id="print-report-btn" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold" disabled>Imprimir</button>
+            <button id="export-csv-btn" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed font-semibold" disabled>Exportar CSV</button>
           </div>
           <div id="report-result" class="mt-6"></div>
         </div>
       `;
 
-      // Adiciona os "escutadores" de eventos que chamam a função de atualização
       document.getElementById('filter-modelo').addEventListener('change', updateReportFilters);
       document.getElementById('filter-grade').addEventListener('change', updateReportFilters);
       document.getElementById('filter-material').addEventListener('change', updateReportFilters);
       document.getElementById('filter-variacao').addEventListener('change', updateReportFilters);
 
-      // Eventos para os botões principais
-      document.getElementById('generate-report-btn').addEventListener('click', generateReport);
+      // Eventos para os novos botões
+      document.getElementById('generate-summary-report-btn').addEventListener('click', generateSummaryReport);
+      document.getElementById('generate-detailed-report-btn').addEventListener('click', generateDetailedReport);
       document.getElementById('print-report-btn').addEventListener('click', handlePrintReport);
       document.getElementById('export-csv-btn').addEventListener('click', handleExportCSV);
       
-      // Chama a função uma vez para popular os filtros com os dados iniciais
       updateReportFilters();
     };
-     
-      const renderHistory = () => {
+
+    const renderHistory = () => {
       const container = document.getElementById('page-historico');
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Histórico de Movimentações</h1>
@@ -842,7 +951,7 @@ const renderMap = () => {
             ${history.map(h=>`
               <li class="p-4">
                 <div class="flex items-center justify-between">
-                  <span class="font-semibold text-lg ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
+                   <span class="font-semibold text-lg ${h.type==='ENTRADA'?'text-green-600':h.type==='SAÍDA'?'text-red-600':'text-yellow-500'}">${h.type}</span>
                   <span class="text-sm text-gray-500">${new Date(h.date).toLocaleString('pt-BR')}</span>
                 </div>
                 <p class="mt-2 text-gray-700">${h.details}</p>
@@ -852,8 +961,8 @@ const renderMap = () => {
         </div>
       `;
     };
-
-    const renderAdmin = () => {
+  
+      const renderAdmin = () => {
       const container = document.getElementById('page-admin');
       if (!adminAuthenticated) { showAdminLoginModal(); container.innerHTML = `<p class="text-center text-gray-600">Por favor, autentique-se para acessar o painel de administração.</p>`; return; }
       container.innerHTML = `

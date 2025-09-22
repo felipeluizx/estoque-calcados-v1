@@ -745,16 +745,18 @@ const renderMap = () => {
       });
     };
 
-    const renderReports = () => {
+      const renderReports = () => {
       const container = document.getElementById('page-relatorios');
       const modelos = [...new Set(productList.map(p => p.modelo))].sort();
       const grades = [...new Set(productList.map(p => p.grade))].sort();
       const materiais = [...new Set(productList.map(p => p.material))].sort();
+      const variacoes = [...new Set(productList.map(p => p.variacao))].sort(); // Adicionado
 
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Gerador de Relatórios</h1>
         <div class="bg-white p-6 rounded-lg shadow-md">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Alterado para 4 colunas */}
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"> 
             <div>
                 <label class="block text-sm font-medium text-gray-700">Modelo</label>
                 <select id="filter-modelo" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
@@ -774,6 +776,13 @@ const renderMap = () => {
                     ${materiais.map(m=>`<option value="${m}">${m}</option>`).join('')}
                 </select>
             </div>
+            {/* Bloco novo para Variação / Cor */}
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Variação / Cor</label>
+                <select id="filter-variacao" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    ${variacoes.map(v=>`<option value="${v}">${v}</option>`).join('')}
+                </select>
+            </div>
           </div>
           <div class="flex flex-col md:flex-row gap-3">
             <button id="generate-report-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold">Gerar Relatório</button>
@@ -787,7 +796,6 @@ const renderMap = () => {
       document.getElementById('print-report-btn').addEventListener('click', handlePrintReport);
       document.getElementById('export-csv-btn').addEventListener('click', handleExportCSV);
     };
-
     const renderHistory = () => {
       const container = document.getElementById('page-historico');
       container.innerHTML = `
@@ -962,12 +970,13 @@ const renderMap = () => {
         history.unshift({ date: new Date().toISOString(), type, details });
     };
 
-    const generateReport = () => {
+      const generateReport = () => {
       const getSelectedValues = (elementId) => Array.from(document.getElementById(elementId).selectedOptions).map(option => option.value);
       const modelosSel = getSelectedValues('filter-modelo');
       const gradesSel = getSelectedValues('filter-grade');
       const materiaisSel = getSelectedValues('filter-material');
-
+      const variacoesSel = getSelectedValues('filter-variacao'); // Adicionado
+      
       let rows = inventory.map(i => ({ ...i, product: productList.find(p => p.id === i.productId) }));
       
       if (modelosSel.length > 0) {
@@ -979,11 +988,15 @@ const renderMap = () => {
       if (materiaisSel.length > 0) {
         rows = rows.filter(r => materiaisSel.includes(r.product.material));
       }
+      // Lógica nova para filtrar por Variação / Cor
+      if (variacoesSel.length > 0) {
+        rows = rows.filter(r => variacoesSel.includes(r.product.variacao));
+      }
 
       const result = document.getElementById('report-result');
       const printBtn = document.getElementById('print-report-btn');
       const exportBtn = document.getElementById('export-csv-btn');
-
+      
       if (!rows.length) {
         result.innerHTML = `<p class="text-gray-600 mt-4">Nenhum item encontrado com os filtros selecionados.</p>`;
         printBtn.disabled = true;

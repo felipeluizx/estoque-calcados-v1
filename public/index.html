@@ -744,43 +744,69 @@ const renderMap = () => {
           });
       });
     };
+      
+      const populateSelect = (elementId, options, selectedValues) => {
+      const select = document.getElementById(elementId);
+      select.innerHTML = options.map(opt => 
+        `<option value="${opt}" ${selectedValues.includes(opt) ? 'selected' : ''}>${opt}</option>`
+      ).join('');
+    };
 
-      const renderReports = () => {
+    const updateReportFilters = () => {
+      const getSelectedValues = (id) => Array.from(document.getElementById(id).selectedOptions).map(opt => opt.value);
+
+      // 1. Pega os valores atualmente selecionados em todos os filtros
+      const selectedModelos = getSelectedValues('filter-modelo');
+      const selectedGrades = getSelectedValues('filter-grade');
+      const selectedMateriais = getSelectedValues('filter-material');
+      const selectedVariacoes = getSelectedValues('filter-variacao');
+
+      // 2. Calcula as opções que ainda são possíveis após cada nível de filtro
+      let listForGrades = productList;
+      if(selectedModelos.length) listForGrades = listForGrades.filter(p => selectedModelos.includes(p.modelo));
+      const availableGrades = [...new Set(listForGrades.map(p => p.grade))].sort();
+
+      let listForMateriais = listForGrades;
+      if(selectedGrades.length) listForMateriais = listForMateriais.filter(p => selectedGrades.includes(p.grade));
+      const availableMateriais = [...new Set(listForMateriais.map(p => p.material))].sort();
+
+      let listForVariacoes = listForMateriais;
+      if(selectedMateriais.length) listForVariacoes = listForVariacoes.filter(p => selectedMateriais.includes(p.material));
+      const availableVariacoes = [...new Set(listForVariacoes.map(p => p.variacao))].sort();
+      
+      // A lista de modelos nunca muda, então recalculamos a partir da lista completa
+      const availableModelos = [...new Set(productList.map(p => p.modelo))].sort();
+
+      // 4. Repopula cada select com as opções filtradas, mantendo as seleções
+      populateSelect('filter-modelo', availableModelos, selectedModelos);
+      populateSelect('filter-grade', availableGrades, selectedGrades);
+      populateSelect('filter-material', availableMateriais, selectedMateriais);
+      populateSelect('filter-variacao', availableVariacoes, selectedVariacoes);
+    };
+
+    const renderReports = () => {
       const container = document.getElementById('page-relatorios');
-      const modelos = [...new Set(productList.map(p => p.modelo))].sort();
-      const grades = [...new Set(productList.map(p => p.grade))].sort();
-      const materiais = [...new Set(productList.map(p => p.material))].sort();
-      const variacoes = [...new Set(productList.map(p => p.variacao))].sort(); // Adicionado
 
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Gerador de Relatórios</h1>
         <div class="bg-white p-6 rounded-lg shadow-md">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"> 
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6"> 
             <div>
                 <label class="block text-sm font-medium text-gray-700">Modelo</label>
-                <select id="filter-modelo" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                    ${modelos.map(m=>`<option value="${m}">${m}</option>`).join('')}
-                </select>
+                <select id="filter-modelo" multiple size="8" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
                 <p class="text-xs text-gray-500 mt-1">Use Ctrl/Cmd para múltiplos.</p>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Grade</label>
-                <select id="filter-grade" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                    ${grades.map(g=>`<option value="${g}">${g}</option>`).join('')}
-                </select>
+                <select id="filter-grade" multiple size="8" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
             </div>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Material</label>
-                <select id="filter-material" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                    ${materiais.map(m=>`<option value="${m}">${m}</option>`).join('')}
-                </select>
+                <select id="filter-material" multiple size="8" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
             </div>
-           
             <div>
                 <label class="block text-sm font-medium text-gray-700">Variação / Cor</label>
-                <select id="filter-variacao" multiple size="6" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                    ${variacoes.map(v=>`<option value="${v}">${v}</option>`).join('')}
-                </select>
+                <select id="filter-variacao" multiple size="8" class="mt-1 block w-full p-2 border border-gray-300 rounded-md"></select>
             </div>
           </div>
           <div class="flex flex-col md:flex-row gap-3">
@@ -791,11 +817,23 @@ const renderMap = () => {
           <div id="report-result" class="mt-6"></div>
         </div>
       `;
+
+      // Adiciona os "escutadores" de eventos que chamam a função de atualização
+      document.getElementById('filter-modelo').addEventListener('change', updateReportFilters);
+      document.getElementById('filter-grade').addEventListener('change', updateReportFilters);
+      document.getElementById('filter-material').addEventListener('change', updateReportFilters);
+      document.getElementById('filter-variacao').addEventListener('change', updateReportFilters);
+
+      // Eventos para os botões principais
       document.getElementById('generate-report-btn').addEventListener('click', generateReport);
       document.getElementById('print-report-btn').addEventListener('click', handlePrintReport);
       document.getElementById('export-csv-btn').addEventListener('click', handleExportCSV);
+      
+      // Chama a função uma vez para popular os filtros com os dados iniciais
+      updateReportFilters();
     };
-    const renderHistory = () => {
+     
+      const renderHistory = () => {
       const container = document.getElementById('page-historico');
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Histórico de Movimentações</h1>

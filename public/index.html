@@ -671,37 +671,30 @@ async function persist() {
       setupSaidaFormListeners();
     };
 
-    const renderMap = () => {
+const renderMap = () => {
       const container = document.getElementById('page-mapa');
-      
       const locationsHtml = mapLayout.locations.map(loc => {
-          const fundoId = `${loc}-FUNDO`;
-	  const meioId = `${loc}-MEIO`;
-          const frenteId = `${loc}-FRENTE`;
-          
-          const itemsFundo = inventory.filter(i => i.locationId === fundoId);
-          const itemsFrente = inventory.filter(i => i.locationId === frenteId);
-
-          const qtyFundo = itemsFundo.reduce((sum, item) => sum + item.quantity, 0);
-          const qtyFrente = itemsFrente.reduce((sum, item) => sum + item.quantity, 0);
-          
+        const positionsHtml = mapLayout.positions.map(pos => {
+          const positionId = `${loc}-${pos}`;
+          const itemsInPosition = inventory.filter(i => i.locationId === positionId);
+          const qtyInPosition = itemsInPosition.reduce((sum, item) => sum + item.quantity, 0);
           const getPositionClass = (qty) => qty > 0 ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
-          
+    
           return `
-              <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
-                  <div class="font-bold text-gray-700 border-b pb-1 text-lg">${loc}</div>
-                  <div id="map-cell-${fundoId}" data-location-id="${fundoId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${getPositionClass(qtyFundo)}">
-                      FUNDO ${qtyFundo > 0 ? `(${qtyFundo})` : ''}
-                  <div id="map-cell-${meioId}" data-location-id="${meioId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${getPositionClass(qtyMeio)}">
-                      MEIO ${qtyMeio > 0 ? `(${qtyMeio})` : ''}
-                  </div>
-                  <div id="map-cell-${frenteId}" data-location-id="${frenteId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${getPositionClass(qtyFrente)}">
-                      FRENTE ${qtyFrente > 0 ? `(${qtyFrente})` : ''}
-                  </div>
-              </div>
+            <div id="map-cell-${positionId}" data-location-id="${positionId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${getPositionClass(qtyInPosition)}">
+              ${pos} ${qtyInPosition > 0 ? `(${qtyInPosition})` : ''}
+            </div>
           `;
+        }).join('');
+    
+        return `
+          <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
+            <div class="font-bold text-gray-700 border-b pb-1 text-lg">${loc}</div>
+            ${positionsHtml}
+          </div>
+        `;
       }).join('');
-
+    
       container.innerHTML = `
           <h1 class="text-3xl font-bold mb-2">Mapa do Estoque</h1>
           <p class="text-gray-600 mb-6">Clique em uma posição para ver detalhes ou use a busca para encontrar um produto.</p>
@@ -712,7 +705,6 @@ async function persist() {
               ${locationsHtml}
           </div>
       `;
-
       document.querySelectorAll('.map-card-position').forEach(cell => {
           cell.addEventListener('click', () => {
               const locationId = cell.dataset.locationId;
@@ -720,7 +712,6 @@ async function persist() {
               showMapCellModal(locationId, items);
           });
       });
-
       document.getElementById('map-search').addEventListener('input', (e) => {
           const searchTerm = e.target.value.toLowerCase();
           document.querySelectorAll('.map-card-position').forEach(cell => {
@@ -736,7 +727,7 @@ async function persist() {
                     return product && product.nomeCompleto.toLowerCase().includes(searchTerm);
                   });
               });
-
+    
               if (searchTerm && !hasMatchInCard) {
                   parentCard.classList.add('opacity-25');
               } else if (searchTerm && hasMatchInCard) {

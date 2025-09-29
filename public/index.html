@@ -65,21 +65,27 @@
         0%, 100% { box-shadow: 0 0 0 4000px rgba(0,0,0,0.4), 0 0 10px 2px #4ade80; }
         50% { box-shadow: 0 0 0 4000px rgba(0,0,0,0.4), 0 0 10px 2px #16a34a; }
     }
+    
     @media print {
       body * {
         visibility: hidden;
       }
-      #page-etiquetas, #page-etiquetas * {
+      #printable-area, #printable-area * {
         visibility: visible;
       }
-      #page-etiquetas {
+      #printable-area {
         position: absolute;
         left: 0;
         top: 0;
         width: 100%;
       }
-      nav, aside, header {
+      nav, aside, header, .modal-backdrop > div:not(#printable-area-container) {
           display: none !important;
+      }
+      .modal-backdrop {
+        background-color: white !important;
+        justify-content: flex-start;
+        align-items: flex-start;
       }
     }
   </style>
@@ -110,17 +116,9 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map h-5 w-5 mr-3"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
           Mapa do Estoque
         </a>
-        <a href="#produtos" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package-plus h-5 w-5 mr-3"><path d="M16.5 9.4a4 4 0 1 1-8 0"/><path d="M12 15H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-3.5"/><path d="M15 6h6"/><path d="M18 3v6"/></svg>
-          Produtos
-        </a>
         <a href="#relatorios" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text h-5 w-5 mr-3"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
           Relatórios
-        </a>
-        <a href="#etiquetas" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code h-5 w-5 mr-3"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
-          Etiquetas
         </a>
         <a href="#historico" class="menu-item flex items-center px-4 py-2 rounded-md hover:bg-gray-700">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history h-5 w-5 mr-3"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
@@ -177,9 +175,9 @@
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map h-6 w-6 mb-1"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
           <span class="text-xs">Mapa</span>
         </a>
-        <a href="#produtos" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package-plus h-6 w-6 mb-1"><path d="M16.5 9.4a4 4 0 1 1-8 0"/><path d="M12 15H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-3.5"/><path d="M15 6h6"/><path d="M18 3v6"/></svg>
-          <span class="text-xs">Produtos</span>
+        <a href="#relatorios" class="menu-item flex flex-col items-center text-center p-2 rounded-lg">
+         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text h-6 w-6 mb-1"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
+          <span class="text-xs">Relatórios</span>
         </a>
       </nav>
     </div>
@@ -359,10 +357,10 @@
             isHandlingScan = true;
             document.getElementById('scan-feedback')?.classList.remove('hidden');
             beep();
-            setTimeout(() => {
+            setTimeout(async () => {
+                await stopActiveScanner();
                 onSuccess(decodedText);
-                isHandlingScan = false;
-            }, 500);
+            }, 1500); // Atraso de 1.5s para processamento
         };
 
         const html5Qrcode = new Html5Qrcode("reader");
@@ -484,30 +482,39 @@
       }
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6 text-red-700">Registrar Saída</h1>
-        <form id="saida-form" class="bg-white p-6 rounded-lg shadow-md space-y-4 max-w-2xl mx-auto">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">1. Item em Estoque</label>
-            <select id="saida-item" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-              <option value="" disabled selected>Selecione um item para dar baixa</option>
-              ${
-                inventory.map((it, idx) => {
-                  const p = productList.find(pp=>pp.id===it.productId);
-                  return { idx, locationId: it.locationId, label: `(${it.locationId}) ${p?.nomeCompleto || 'Produto desconhecido'} - ${it.quantity} caixas` };
-                })
-                .sort((a,b)=>a.locationId.localeCompare(b.locationId))
-                .map(r=>`<option value="${r.idx}">${r.label}</option>`).join('')
-              }
-            </select>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">2. Quantidade a Retirar</label>
-            <input type="number" id="saida-quantidade" required min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Máx: 0">
-          </div>
-          <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 font-bold text-lg flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 mr-2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
-            Confirmar Saída
-          </button>
-        </form>
+        <div class="bg-white p-6 rounded-lg shadow-md max-w-2xl mx-auto">
+            <div class="space-y-4">
+                 <button type="button" id="saida-scan-process-btn" class="w-full bg-gray-700 text-white hover:bg-gray-800 px-4 py-3 rounded-md text-lg font-semibold flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-line"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+                    Iniciar Saída por Leitura
+                </button>
+                <div class="text-center text-gray-500">ou preencha manualmente:</div>
+            </div>
+            <form id="saida-form" class="mt-4 space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700">1. Item em Estoque</label>
+                <select id="saida-item" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                  <option value="" disabled selected>Selecione um item para dar baixa</option>
+                  ${
+                    inventory.map((it, idx) => {
+                      const p = productList.find(pp=>pp.id===it.productId);
+                      return { idx, locationId: it.locationId, label: `(${it.locationId}) ${p?.nomeCompleto || 'Produto desconhecido'} - ${it.quantity} caixas` };
+                    })
+                    .sort((a,b)=>a.locationId.localeCompare(b.locationId))
+                    .map(r=>`<option value="${r.idx}">${r.label}</option>`).join('')
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700">2. Quantidade a Retirar</label>
+                <input type="number" id="saida-quantidade" required min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Máx: 0">
+              </div>
+              <button type="submit" class="w-full bg-red-600 text-white px-4 py-3 rounded-md hover:bg-red-700 font-bold text-lg flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 mr-2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+                Confirmar Saída Manual
+              </button>
+            </form>
+        </div>
       `;
       setupSaidaFormListeners();
     };
@@ -595,18 +602,25 @@
     const renderProdutos = () => {
         const container = document.getElementById('page-produtos');
         container.innerHTML = `
-            <div class="flex justify-between items-center mb-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h1 class="text-3xl font-bold">Gestão de Produtos</h1>
-                <button id="add-product-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-                    Novo Produto
-                </button>
+                <div class="flex gap-2">
+                    <button id="print-products-btn" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 font-semibold flex items-center gap-2 disabled:opacity-50" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-printer"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
+                        Imprimir/Baixar
+                    </button>
+                    <button id="add-product-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                        Novo Produto
+                    </button>
+                </div>
             </div>
             <div class="bg-white p-4 rounded-lg shadow-md">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th class="px-6 py-3 text-left"><input type="checkbox" id="select-all-products"></th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modelo</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Grade</th>
@@ -617,6 +631,7 @@
                         <tbody class="bg-white divide-y divide-gray-200">
                             ${productList.map(p => `
                                 <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap"><input type="checkbox" class="product-checkbox" data-product-id="${p.id}"></td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${p.id}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.modelo}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${p.grade}</td>
@@ -631,6 +646,28 @@
         `;
 
         document.getElementById('add-product-btn').addEventListener('click', showAddProductModal);
+        
+        const printBtn = document.getElementById('print-products-btn');
+        const selectAllCheckbox = document.getElementById('select-all-products');
+        const checkboxes = document.querySelectorAll('.product-checkbox');
+
+        const togglePrintButton = () => {
+            const anyChecked = [...checkboxes].some(c => c.checked);
+            printBtn.disabled = !anyChecked;
+        };
+
+        selectAllCheckbox.addEventListener('change', (e) => {
+            checkboxes.forEach(c => c.checked = e.target.checked);
+            togglePrintButton();
+        });
+
+        checkboxes.forEach(c => c.addEventListener('change', togglePrintButton));
+        
+        printBtn.addEventListener('click', () => {
+            const selectedIds = [...checkboxes].filter(c => c.checked).map(c => parseInt(c.dataset.productId));
+            const selectedProducts = productList.filter(p => selectedIds.includes(p.id));
+            showPrintProductsModal(selectedProducts);
+        });
     };
 
       const populateSelect = (elementId, options, selectedValues) => {
@@ -844,7 +881,7 @@
                 </button>
             </div>
             <p class="text-gray-600 mb-6">Imprima esta página e cole os QR Codes em suas respectivas prateleiras.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="printable-area">
                 ${locationsHtml}
             </div>
         `;
@@ -884,10 +921,29 @@
       document.body.classList.remove('move-mode-active');
       moveOperation = null;
       const container = document.getElementById('page-admin');
-      if (!adminAuthenticated) { showAdminLoginModal(); container.innerHTML = `<p class="text-center text-gray-600">Por favor, autentique-se para acessar o painel de administração.</p>`; return; }
+      if (!adminAuthenticated) { 
+          showAdminLoginModal(); 
+          container.innerHTML = `<p class="text-center text-gray-600">Por favor, autentique-se para acessar o painel de administração.</p>`; 
+          return; 
+      }
       container.innerHTML = `
         <h1 class="text-3xl font-bold mb-6">Painel de Administração</h1>
         <div class="space-y-6">
+
+          <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+            <h2 class="text-xl font-bold mb-3">Gestão</h2>
+            <div class="flex flex-wrap gap-3">
+                <a href="#produtos" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-package-plus h-5 w-5"><path d="M16.5 9.4a4 4 0 1 1-8 0"/><path d="M12 15H6a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-3.5"/><path d="M15 6h6"/><path d="M18 3v6"/></svg>
+                    Gerenciar Produtos
+                </a>
+                <a href="#etiquetas" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code h-5 w-5"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+                    Imprimir Etiquetas de Posição
+                </a>
+            </div>
+          </div>
+
           <div class="bg-white p-6 rounded-lg shadow-md border-l-4 border-yellow-500">
             <h2 class="text-xl font-bold mb-2">Ações Reversíveis</h2>
             <p class="text-gray-600 mb-4">Cuidado: afeta o histórico.</p>
@@ -905,7 +961,7 @@
     };
 
     function setupEntradaFormListeners() {
-      document.getElementById('entrada-scan-process-btn').addEventListener('click', () => startEntryScanProcess());
+      document.getElementById('entrada-scan-process-btn').addEventListener('click', () => startScanWorkflow('ENTRADA'));
       const modeloSelect = document.getElementById('entrada-modelo');
       const gradeSelect = document.getElementById('entrada-grade');
       const materialSelect = document.getElementById('entrada-material');
@@ -949,6 +1005,7 @@
     }
 
     function setupSaidaFormListeners() {
+      document.getElementById('saida-scan-process-btn').addEventListener('click', () => startScanWorkflow('SAIDA'));
       const itemSelect = document.getElementById('saida-item');
       const qtdInput = document.getElementById('saida-quantidade');
 
@@ -961,27 +1018,7 @@
 
       document.getElementById('saida-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const idx = parseInt(itemSelect.value);
-        const qty = parseInt(qtdInput.value);
-        if (Number.isNaN(idx) || !inventory[idx]) return;
-
-        const it = inventory[idx];
-        const p = productList.find(pp=>pp.id===it.productId);
-        if (qty > it.quantity) {
-            showToast('A quantidade de saída não pode ser maior que a em estoque.', 'error');
-            return;
-        }
-
-        if (qty === it.quantity) {
-            inventory.splice(idx,1);
-        } else { 
-            it.quantity -= qty;
-        }
-        addHistory('SAÍDA', `-${qty} caixas de ${p?.nomeCompleto || 'Produto desconhecido'} de ${it.locationId}`);
-
-        await persistInventory();
-        showToast('Saída registrada com sucesso!');
-        goTo('#mapa');
+        await registerExit(parseInt(itemSelect.value), parseInt(qtdInput.value));
       });
     }
 
@@ -992,17 +1029,11 @@
     const handlePrintReport = () => {
         const tableHtml = document.getElementById('report-table')?.outerHTML;
         if (!tableHtml) return;
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`<html><head><title>Relatório de Estoque</title>
-            <style>
-                body { font-family: Inter, sans-serif; }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
-                thead { background-color: #f2f2f2; }
-            </style>
-        </head><body>${tableHtml}</body></html>`);
-        printWindow.document.close();
-        printWindow.print();
+        const content = `<div id="printable-area">${tableHtml}</div>`;
+        const modalContent = document.getElementById('modal-content');
+        if (modalContent) modalContent.innerHTML = content;
+        else showModal(content);
+        window.print();
     };
 
     const handleExportCSV = () => {
@@ -1047,10 +1078,10 @@
     };
 
 
-    const showModal = (content) => {
+    const showModal = (content, maxWidth = 'max-w-md') => {
       const mc = document.getElementById('modal-container');
       mc.innerHTML = `<div class="modal-backdrop fixed inset-0 z-40 flex items-center justify-center p-4">
-        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto relative" id="modal-content">${content}</div>
+        <div class="bg-white rounded-lg shadow-2xl w-full ${maxWidth} max-h-full overflow-y-auto relative" id="modal-content">${content}</div>
       </div>`;
       mc.classList.remove('hidden');
       mc.querySelector('.modal-backdrop').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
@@ -1117,7 +1148,7 @@
         
         document.getElementById('map-scan-here')?.addEventListener('click', async () => {
             await closeModal();
-            startEntryScanProcess(locationId);
+            startScanWorkflow('ENTRADA', { location: locationId.split('-')[0] });
         });
     };
 
@@ -1223,86 +1254,178 @@
         if(window.location.hash !== '#mapa') goTo('#mapa');
         else rerenderCurrentPage();
     }
+    
+    async function registerExit(inventoryIndex, quantityToRemove) {
+        if (inventoryIndex === null || isNaN(inventoryIndex) || !inventory[inventoryIndex] || isNaN(quantityToRemove) || quantityToRemove <= 0) {
+            showToast('Dados de saída inválidos.', 'error');
+            return;
+        }
 
-    function startEntryScanProcess(fixedLocationId = null) {
-        let scannedProduct = null;
-        let scannedBaseLocation = null;
+        const item = inventory[inventoryIndex];
+        const product = productList.find(p => p.id === item.productId);
 
-        const handleProductScan = (decodedText) => {
-            const payload = parseScannedPayload(decodedText);
-            if (payload.type !== 'product') {
-                showToast('QR Code inválido. Por favor, leia o código de um produto.', 'error');
-                return;
+        if (quantityToRemove > item.quantity) {
+            showToast('A quantidade de saída não pode ser maior que a em estoque.', 'error');
+            return;
+        }
+
+        if (quantityToRemove === item.quantity) {
+            inventory.splice(inventoryIndex, 1);
+        } else {
+            item.quantity -= quantityToRemove;
+        }
+        
+        addHistory('SAÍDA', `-${quantityToRemove} caixas de ${product?.nomeCompleto || 'Produto desconhecido'} de ${item.locationId}`);
+        await persistInventory();
+        showToast('Saída registrada com sucesso!');
+        goTo('#mapa');
+    }
+
+    function startScanWorkflow(operation, initialState = {}) {
+        let state = {
+            operation, // 'ENTRADA' ou 'SAIDA'
+            product: initialState.product || null,
+            location: initialState.location || null,
+        };
+
+        const nextStep = () => {
+            if (!state.product) {
+                showGenericScanner('Leia o código do PRODUTO', handleScan);
+            } else if (!state.location) {
+                showGenericScanner('Leia o código da POSIÇÃO (A, B...)', handleScan);
+            } else {
+                showFinalModal();
             }
-            const product = findProductFromScan(payload);
-            if (product) {
-                scannedProduct = { ...product, quantityFromQR: payload.quantity };
-                if (fixedLocationId) {
-                    const baseLocation = fixedLocationId.split('-')[0];
-                    scannedBaseLocation = { location: baseLocation };
-                    showFinalEntryModal();
+        };
+
+        const handleScan = (decodedText) => {
+            const payload = parseScannedPayload(decodedText);
+            let found = false;
+            
+            if (payload.type === 'product' && !state.product) {
+                const product = findProductFromScan(payload);
+                if (product) {
+                    state.product = product;
+                    found = true;
                 } else {
-                    showGenericScanner('Leia o código da POSIÇÃO (A, B...)', handleLocationScan);
+                    showToast('Produto não encontrado.', 'error');
                 }
+            } else if (payload.type === 'location' && !state.location) {
+                state.location = payload.location;
+                found = true;
             } else {
-                showToast('Produto não encontrado.', 'error');
-                stopActiveScanner().then(closeModal);
+                showToast('Código inválido ou já escaneado.', 'error');
+            }
+            
+            if (found) {
+                nextStep();
+            } else {
+                closeModal().then(nextStep);
             }
         };
 
-        const handleLocationScan = (decodedText) => {
-            const payload = parseScannedPayload(decodedText);
-            if (payload.type === 'location') {
-                scannedBaseLocation = payload;
-                showFinalEntryModal();
-            } else {
-                showToast('QR Code inválido. Por favor, leia o código de uma POSIÇÃO.', 'error');
+        const showFinalModal = () => {
+            closeModal();
+            if (state.operation === 'ENTRADA') {
+                showEntryFinalModal(state.product, state.location);
+            } else if (state.operation === 'SAIDA') {
+                showExitFinalModal(state.product, state.location);
             }
         };
-        
-        const showFinalEntryModal = async () => {
-            await stopActiveScanner();
-            await closeModal();
 
-            const content = `
-                <form id="scan-final-form" class="p-6 space-y-4">
-                    <h3 class="text-xl font-bold mb-2">Confirmar Entrada</h3>
-                    <div class="bg-gray-100 p-3 rounded-md">
-                        <p class="font-semibold">${scannedProduct.nomeCompleto}</p>
-                        <p class="text-sm text-gray-600">Em Posição: ${scannedBaseLocation.location}</p>
-                    </div>
-                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Posição Detalhada</label>
-                        <select id="scan-final-position" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                            ${mapLayout.positions.map(p => `<option value="${p}">${p}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Quantidade</label>
-                        <input type="number" id="scan-final-quantity" value="${scannedProduct.quantityFromQR || 1}" min="1" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                    </div>
-                    <div class="flex justify-end gap-3 pt-4">
-                        <button type="button" id="scan-final-cancel" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Cancelar</button>
-                        <button type="submit" class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">Confirmar</button>
-                    </div>
-                </form>
-            `;
-            showModal(content);
-            document.getElementById('scan-final-cancel').onclick = closeModal;
-            document.getElementById('scan-final-form').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const position = document.getElementById('scan-final-position').value;
-                const quantity = parseInt(document.getElementById('scan-final-quantity').value);
-                const finalLocationId = `${scannedBaseLocation.location}-${position}`;
-                
-                await registerEntry(scannedProduct, quantity, finalLocationId);
-                closeModal();
-            });
-        };
-        
-        showGenericScanner(fixedLocationId ? 'Leia o código do PRODUTO' : 'Leia o código do PRODUTO', handleProductScan);
+        nextStep();
     }
     
+    function showEntryFinalModal(product, baseLocation) {
+        const content = `
+            <form id="scan-final-form" class="p-6 space-y-4">
+                <h3 class="text-xl font-bold mb-2">Confirmar Entrada</h3>
+                <div class="bg-gray-100 p-3 rounded-md">
+                    <p class="font-semibold">${product.nomeCompleto}</p>
+                    <p class="text-sm text-gray-600">Em Posição: ${baseLocation}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Posição Detalhada</label>
+                    <select id="scan-final-position" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        ${mapLayout.positions.map(p => `<option value="${p}">${p}</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Quantidade</label>
+                    <input type="number" id="scan-final-quantity" value="1" min="1" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700">Confirmar</button>
+                </div>
+            </form>
+        `;
+        showModal(content);
+        document.getElementById('scan-final-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const position = document.getElementById('scan-final-position').value;
+            const quantity = parseInt(document.getElementById('scan-final-quantity').value);
+            const finalLocationId = `${baseLocation}-${position}`;
+            
+            await registerEntry(product, quantity, finalLocationId);
+            closeModal();
+        });
+    }
+
+    function showExitFinalModal(product, baseLocation) {
+        const itemsInBaseLocation = inventory
+            .map((item, index) => ({...item, index}))
+            .filter(item => item.locationId.startsWith(`${baseLocation}-`) && item.productId === product.id);
+        
+        if(itemsInBaseLocation.length === 0) {
+            showToast(`Produto ${product.nomeCompleto} não encontrado na posição ${baseLocation}.`, 'error');
+            return;
+        }
+
+        const content = `
+            <form id="scan-final-form" class="p-6 space-y-4">
+                <h3 class="text-xl font-bold mb-2">Confirmar Saída</h3>
+                <div class="bg-gray-100 p-3 rounded-md">
+                    <p class="font-semibold">${product.nomeCompleto}</p>
+                    <p class="text-sm text-gray-600">Da Posição: ${baseLocation}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Lote Específico</label>
+                    <select id="scan-final-item" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                        ${itemsInBaseLocation.map(item => `<option value="${item.index}">(${item.locationId}) - ${item.quantity} caixas</option>`).join('')}
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Quantidade a Retirar</label>
+                    <input type="number" id="scan-final-quantity" value="1" min="1" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700">Confirmar Saída</button>
+                </div>
+            </form>
+        `;
+        showModal(content);
+
+        const itemSelect = document.getElementById('scan-final-item');
+        const quantityInput = document.getElementById('scan-final-quantity');
+        const updateMax = () => {
+            const selectedItem = inventory[itemSelect.value];
+            if(selectedItem) quantityInput.max = selectedItem.quantity;
+        };
+        itemSelect.addEventListener('change', updateMax);
+        updateMax();
+
+        document.getElementById('scan-final-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inventoryIndex = parseInt(itemSelect.value);
+            const quantity = parseInt(quantityInput.value);
+            
+            await registerExit(inventoryIndex, quantity);
+            closeModal();
+        });
+    }
+
     function showAddProductModal() {
         const content = `
             <form id="add-product-form" class="p-6 space-y-4">
@@ -1353,7 +1476,53 @@
             rerenderCurrentPage();
         });
     }
+    
+    function showPrintProductsModal(products) {
+        const labelsHtml = products.map(p => `
+            <div class="p-2 border border-gray-300 rounded-lg flex flex-col items-center gap-2 break-inside-avoid">
+                <div id="print-qr-${p.id}"></div>
+                <p class="text-center text-xs font-semibold">${p.nomeCompleto} {productId:${p.id}}</p>
+            </div>
+        `).join('');
 
+        const content = `
+            <div class="p-6" id="printable-area-container">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Etiquetas de Produto</h3>
+                    <div>
+                         <button id="download-labels-btn" class="px-3 py-1 rounded-md bg-green-600 text-white hover:bg-green-700 text-sm mr-2">Baixar</button>
+                         <button id="print-labels-btn" class="px-3 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-sm">Imprimir</button>
+                    </div>
+                </div>
+                <div id="printable-area" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    ${labelsHtml}
+                </div>
+            </div>
+        `;
+        showModal(content, 'max-w-4xl');
+
+        products.forEach(p => {
+            new QRCode(document.getElementById(`print-qr-${p.id}`), {
+                text: JSON.stringify({ productId: p.id }),
+                width: 128,
+                height: 128,
+            });
+        });
+
+        document.getElementById('print-labels-btn').onclick = () => window.print();
+        document.getElementById('download-labels-btn').onclick = async () => {
+            for(const p of products) {
+                const qrEl = document.getElementById(`print-qr-${p.id}`);
+                const canvas = qrEl.querySelector('canvas');
+                const dataUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `produto-${p.id}-${p.modelo}-${p.variacao}.png`;
+                link.href = dataUrl;
+                link.click();
+                await new Promise(r => setTimeout(r, 100)); // Pequeno delay
+            }
+        };
+    }
 
     const showAdminLoginModal = () => {
       const content = `
@@ -1420,10 +1589,17 @@
     
     const navigate = () => {
       const hash = window.location.hash || '#home';
-      if (hash !== '#admin') {
+      if (hash !== '#admin' && hash !== '#produtos' && hash !== '#etiquetas') {
           lastVisitedHash = hash;
       }
+      
       const pageId = `page-${hash.substring(1)}`;
+      
+      if((hash === '#produtos' || hash === '#etiquetas') && !adminAuthenticated) {
+          goTo('#admin');
+          return;
+      }
+
       pages.forEach(p => p.classList.toggle('hidden', p.id !== pageId));
       menuItems.forEach(i => i.classList.toggle('active', i.getAttribute('href') === hash));
       rerenderCurrentPage();
@@ -1439,7 +1615,7 @@
         case '#mapa': title='Mapa'; renderMap(); break;
         case '#produtos': title='Produtos'; renderProdutos(); break;
         case '#relatorios': title='Relatórios'; renderReports(); break;
-        case '#etiquetas': title='Etiquetas'; renderEtiquetas(); break;
+        case '#etiquetas': title='Etiquetas de Posição'; renderEtiquetas(); break;
         case '#historico': title='Histórico'; renderHistory(); break;
         case '#admin': title='Admin'; renderAdmin(); break;
       }

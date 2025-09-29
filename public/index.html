@@ -321,7 +321,7 @@
         activeScanner = null;
     }
 
-    function showGenericScanner(title, onSuccess) {
+    async function showGenericScanner(title, onSuccess) {
         const content = `
             <div class="p-4 relative">
             <button id="scan-close" class="absolute top-2 right-2 text-gray-500 hover:text-gray-800 z-10 bg-white rounded-full p-1">
@@ -345,18 +345,35 @@
                 onSuccess(decodedText);
             }, 1500);
         };
-
-        const html5Qrcode = new Html5Qrcode("reader");
-        activeScanner = html5Qrcode;
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
         
-        html5Qrcode.start({ facingMode: "environment" }, config, onScanSuccessWrapper)
-            .catch(err => showToast(`Erro na câmera: ${err}`, 'error'));
-
         document.getElementById('scan-close').onclick = async () => {
             await stopActiveScanner();
             closeModal();
         };
+
+        const html5Qrcode = new Html5Qrcode("reader");
+        activeScanner = html5Qrcode;
+        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+        try {
+            const devices = await Html5Qrcode.getCameras();
+            if (devices && devices.length) {
+                const cameraId = devices.length > 1 ? devices[devices.length - 1].id : devices[0].id;
+                await html5Qrcode.start(
+                    cameraId,
+                    config,
+                    onScanSuccessWrapper,
+                    (errorMessage) => { /* ignore errors during scan */ }
+                );
+            } else {
+                showToast('Nenhuma câmera encontrada.', 'error');
+                closeModal();
+            }
+        } catch (err) {
+            showToast(`Erro ao iniciar a câmera: ${err}`, 'error');
+            console.error("Erro ao iniciar a câmera:", err);
+            closeModal();
+        }
     }
 
     // ======= FIM SCANNER =======
@@ -1288,14 +1305,15 @@
         };
 
         const nextStep = () => {
-            closeModal();
-            if (!state.product) {
-                showGenericScanner('Leia o código do PRODUTO', handleScan);
-            } else if (!state.location) {
-                showGenericScanner('Leia o código da POSIÇÃO (A, B...)', handleScan);
-            } else {
-                showFinalModal();
-            }
+            closeModal().then(() => {
+                if (!state.product) {
+                    showGenericScanner('Leia o código do PRODUTO', handleScan);
+                } else if (!state.location) {
+                    showGenericScanner('Leia o código da POSIÇÃO (A, B...)', handleScan);
+                } else {
+                    showFinalModal();
+                }
+            });
         };
 
         const handleScan = (decodedText) => {
@@ -1317,11 +1335,7 @@
                 showToast('Código inválido ou já escaneado.', 'error');
             }
             
-            if (found) {
-                nextStep();
-            } else {
-                setTimeout(nextStep, 100);
-            }
+            nextStep();
         };
 
         const showFinalModal = () => {

@@ -488,7 +488,7 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-scan-line"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
                     Iniciar Saída por Leitura
                 </button>
-                <div class="text-center text-gray-500">ou preencha manualmente:</div>
+                <div class="text-center text-gray-500">ou preencha manually:</div>
             </div>
             <form id="saida-form" class="mt-4 space-y-4">
               <div>
@@ -1304,38 +1304,34 @@
             location: initialState.location || null,
         };
 
-        const nextStep = () => {
-            closeModal().then(() => {
-                if (!state.product) {
-                    showGenericScanner('Leia o código do PRODUTO', handleScan);
-                } else if (!state.location) {
-                    showGenericScanner('Leia o código da POSIÇÃO (A, B...)', handleScan);
-                } else {
-                    showFinalModal();
-                }
-            });
-        };
-
-        const handleScan = (decodedText) => {
+        const processScan = (decodedText) => {
             const payload = parseScannedPayload(decodedText);
-            let found = false;
             
             if (payload.type === 'product' && !state.product) {
                 const product = productList.find(p => p.id === payload.productId);
                 if (product) {
                     state.product = product;
-                    found = true;
                 } else {
                     showToast('Produto não encontrado.', 'error');
                 }
             } else if (payload.type === 'location' && !state.location) {
                 state.location = payload.location;
-                found = true;
             } else {
                 showToast('Código inválido ou já escaneado.', 'error');
             }
-            
-            nextStep();
+            runStateMachine();
+        };
+
+        const runStateMachine = () => {
+            closeModal().then(() => {
+                if (state.product && state.location) {
+                    showFinalModal();
+                } else if (!state.product) {
+                    showGenericScanner('Leia o código do PRODUTO', processScan);
+                } else { // Implies !state.location
+                    showGenericScanner('Leia o código da POSIÇÃO (A, B...)', processScan);
+                }
+            });
         };
 
         const showFinalModal = () => {
@@ -1346,7 +1342,7 @@
             }
         };
 
-        nextStep();
+        runStateMachine();
     }
     
     function showEntryFinalModal(product, baseLocation) {
@@ -1359,9 +1355,12 @@
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Posição Detalhada</label>
-                    <select id="scan-final-position" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-                        ${mapLayout.positions.map(p => `<option value="${p}">${p}</option>`).join('')}
-                    </select>
+                    <div id="scan-final-position-buttons" class="mt-2 grid grid-cols-3 gap-2">
+                        ${mapLayout.positions.map((p, index) => `
+                            <button type="button" data-position="${p}" class="position-selector-btn p-3 rounded-md border-2 font-semibold transition-colors ${index === 0 ? 'border-blue-500 bg-blue-100 text-blue-800' : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'}">${p}</button>
+                        `).join('')}
+                    </div>
+                    <input type="hidden" id="scan-final-position" required>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Quantidade</label>
@@ -1374,6 +1373,24 @@
             </form>
         `;
         showModal(content);
+        
+        const positionButtons = document.querySelectorAll('.position-selector-btn');
+        const hiddenPositionInput = document.getElementById('scan-final-position');
+
+        hiddenPositionInput.value = positionButtons[0].dataset.position;
+
+        positionButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                hiddenPositionInput.value = button.dataset.position;
+                positionButtons.forEach(btn => {
+                    btn.classList.remove('border-blue-500', 'bg-blue-100', 'text-blue-800');
+                    btn.classList.add('border-gray-200', 'bg-gray-50', 'text-gray-600', 'hover:bg-gray-100');
+                });
+                button.classList.add('border-blue-500', 'bg-blue-100', 'text-blue-800');
+                button.classList.remove('border-gray-200', 'bg-gray-50', 'text-gray-600', 'hover:bg-gray-100');
+            });
+        });
+
         document.getElementById('scan-final-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const position = document.getElementById('scan-final-position').value;

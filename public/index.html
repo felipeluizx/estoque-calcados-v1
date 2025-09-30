@@ -1034,14 +1034,21 @@
         history.unshift({ date: new Date().toISOString(), type, details });
     };
     
-    const handlePrintReport = () => {
+       const handlePrintReport = () => {
         const tableHtml = document.getElementById('report-table')?.outerHTML;
         if (!tableHtml) return;
-        const content = `<div id="printable-area">${tableHtml}</div>`;
-        const modalContent = document.getElementById('modal-content');
-        if (modalContent) modalContent.innerHTML = content;
-        else showModal(content);
-        window.print();
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`<html><head><title>Relatório de Estoque</title>
+            <style>
+                body { font-family: Inter, sans-serif; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 12px; }
+                thead { background-color: #f2f2f2; }
+            </style>
+        </head><body>${tableHtml}</body></html>`);
+        printWindow.document.close();
+        printWindow.print();
+
     };
 
     const handleExportCSV = () => {

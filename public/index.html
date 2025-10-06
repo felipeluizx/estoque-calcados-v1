@@ -458,16 +458,7 @@ if (devices && devices.length) {
       const topProduct = Object.entries(productCounts).sort((a,b)=>b[1]-a[1])[0];
 
       container.innerHTML = `
-                                // === controle de UI do modo mover ===
-const btnCancel = document.getElementById('btn-move-cancel');
-if (moveOperation) {
-  btnCancel.classList.remove('hidden');
-  document.body.classList.add('move-mode-active');
-} else {
-  btnCancel.classList.add('hidden');
-  document.body.classList.remove('move-mode-active');
-}
-
+                               
         <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div class="bg-white p-6 rounded-lg shadow-md"><h3 class="text-gray-500 text-sm font-medium">Caixas em Estoque</h3><p class="text-3xl font-bold mt-2">${totalBoxes.toLocaleString('pt-BR')}</p></div>
@@ -795,12 +786,24 @@ ${
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
               ${locationsHtml}
-                    // Botão: Modo Reorganização (ativa visual e prepara movimentação rápida)
+                   
+          </div>
+      `;
+      // [NOVO - visibilidade do botão "Cancelar mover"]
+(() => {
+  const btnCancel = document.getElementById('btn-move-cancel');
+  if (btnCancel) {
+    if (moveOperation) btnCancel.classList.remove('hidden');
+    else btnCancel.classList.add('hidden');
+  }
+})();
+
+      // Botão: Modo Reorganização
 document.getElementById('btn-reorg-mode').onclick = () => {
   moveOperation = moveOperation ? null : { fromLocationId: null };
   if (moveOperation) {
     document.body.classList.add('move-mode-active');
-    showToast('Modo Reorganização ativo: clique em uma posição de ORIGEM, depois DESTINO.', 'info');
+    showToast('Modo Reorganização ativo: clique na ORIGEM e depois no DESTINO.', 'info');
   } else {
     document.body.classList.remove('move-mode-active');
     showToast('Modo Reorganização desativado.', 'warn');
@@ -808,14 +811,16 @@ document.getElementById('btn-reorg-mode').onclick = () => {
   rerenderCurrentPage();
 };
 
-// Botão: Sugestão de Reorganização (placeholder – abre dicas)
+// Botão: Sugestão de Reorganização
 document.getElementById('btn-reorg-suggest').onclick = () => {
-  // Exemplo simples: listar posições com muitos itens e vazias
-  const byLoc = mapLayout.locations.flatMap(loc => mapLayout.positions.map(pos => `${loc}-${pos}`))
+  const byLoc = mapLayout.locations
+    .flatMap(loc => mapLayout.positions.map(pos => `${loc}-${pos}`))
     .map(id => {
-      const qty = inventory.filter(i => i.locationId === id).reduce((s,i)=>s+i.quantity,0);
+      const qty = inventory.filter(i => i.locationId === id)
+                           .reduce((s,i)=>s+i.quantity,0);
       return { id, qty };
     });
+
   const top = byLoc.slice().sort((a,b)=>b.qty-a.qty).slice(0,3);
   const empty = byLoc.filter(x=>x.qty===0).slice(0,3);
 
@@ -836,13 +841,11 @@ document.getElementById('btn-reorg-suggest').onclick = () => {
           </ul>
         </div>
       </div>
-      <div class="mt-4 text-sm text-gray-500">Dica: mova dos slots mais cheios para os vazios/próximos para balancear.</div>
+      <div class="mt-4 text-sm text-gray-500">Dica: mova dos slots mais cheios para vazios/próximos.</div>
     </div>`;
   showModal(html);
 };
 
-          </div>
-      `;
 
       document.getElementById('btn-move-cancel').onclick = () => {
         moveOperation = null;
@@ -865,17 +868,31 @@ document.getElementById('btn-reorg-suggest').onclick = () => {
         });
       };
 
-      document.querySelectorAll('.map-card-position').forEach(cell => {
-        cell.addEventListener('click', () => {
-          const locationId = cell.dataset.locationId;
-          if(moveOperation) {
-            handleMoveSelection(locationId);
-          } else {
-            const items = inventory.filter(i => i.locationId === locationId);
-            showMapCellModal(locationId, items);
-          }
-        });
-      });
+        
+  document.querySelectorAll('.map-card-position').forEach(cell => {
+  cell.addEventListener('click', () => {
+    const locationId = cell.dataset.locationId;
+
+    if (moveOperation) {
+      // 1º clique escolhe a ORIGEM quando ainda não definida
+      if (!moveOperation.fromLocationId) {
+        moveOperation.fromLocationId = locationId;
+        document.body.classList.add('move-mode-active');
+        showToast(`Origem selecionada: ${locationId}. Agora clique no destino…`, 'info');
+        rerenderCurrentPage();
+        return;
+      }
+      // 2º clique escolhe o DESTINO
+      handleMoveSelection(locationId);
+      return;
+    }
+
+    // Sem modo mover: abre modal da posição
+    const items = inventory.filter(i => i.locationId === locationId);
+    showMapCellModal(locationId, items);
+  });
+});
+
 
      let mapSearchTid;
 document.getElementById('map-search').addEventListener('input', (e) => {
@@ -911,7 +928,7 @@ function applyMapSearch(value) {
     }
   });
 }
-
+};
 
     const renderProdutos = () => {
       const container = document.getElementById('page-produtos');

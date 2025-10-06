@@ -3,7 +3,7 @@ export const onRequest = async ({ env, request, params }) => {
   const url = new URL(request.url);
   const method = request.method.toUpperCase();
   const send = (b, s=200)=>new Response(JSON.stringify(b),{status:s,headers:{'content-type':'application/json; charset=utf-8'}});
-  const KV = env.KV;
+  const KV = ESTOQUE_DB;
 
   async function loadArray(key){
     const s = await KV.get(key); if(!s) return [];

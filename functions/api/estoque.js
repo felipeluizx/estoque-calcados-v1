@@ -1,3 +1,5 @@
+const SESSION_PREFIX = "admin-session:";
+
 const json = (obj, status = 200, extraHeaders = {}) =>
   new Response(JSON.stringify(obj), {
     status,
@@ -11,13 +13,25 @@ const json = (obj, status = 200, extraHeaders = {}) =>
   });
 
 function assertKV(env) {
-  const kv = env?.ESTOQUE_DB; // usa o binding configurado no Pages
+  const kv = env?.KV_BINDING || env?.ESTOQUE_DB;
   if (!kv || typeof kv.get !== "function" || typeof kv.put !== "function") {
     throw new Error(
-      "KV binding 'ESTOQUE_DB' não encontrado. Verifique Settings → Functions → KV bindings (Production e Preview)."
+      "KV binding 'KV_BINDING'/'ESTOQUE_DB' não encontrado. Verifique Settings → Functions → KV bindings (Production e Preview)."
     );
   }
   return kv;
+}
+
+async function hasValidAdminSession(request, kv) {
+  const authHeader = request.headers.get("authorization") || "";
+  if (!authHeader.toLowerCase().startsWith("bearer ")) {
+    return false;
+  }
+  const token = authHeader.slice(7).trim();
+  if (!token) return false;
+  const sessionKey = `${SESSION_PREFIX}${token}`;
+  const session = await kv.get(sessionKey);
+  return Boolean(session);
 }
 
 export const onRequestGet = async ({ request, env }) => {
@@ -61,6 +75,10 @@ export const onRequestGet = async ({ request, env }) => {
 export const onRequestPost = async ({ request, env }) => {
   try {
     const kv = assertKV(env);
+    const authorized = await hasValidAdminSession(request, kv);
+    if (!authorized) {
+      return json({ ok: false, error: "Token administrativo inválido ou ausente." }, 401);
+    }
     const url = new URL(request.url);
 
     // --- Suporte a reset ---

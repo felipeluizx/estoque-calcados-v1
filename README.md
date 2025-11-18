@@ -20,13 +20,29 @@ Pronto para deploy **grátis**.
    - Settings → Functions → D1 Bindings
    - Binding name: `DB` (exatamente)
    - Database: escolha o D1 criado
-6. Aplique a migration `migrations/001_init.sql` no D1 (aba Migrations).
-7. Abra a URL `https://<project>.pages.dev`. Done!
+6. Crie um namespace **Workers KV** e conecte o binding `KV_BINDING`:
+   - Workers & Pages → KV → Create namespace (ex: `estoque-db`).
+   - No projeto Pages → Settings → Functions → KV Namespace bindings.
+   - Binding name: `KV_BINDING` (preview **e** production) → escolha o namespace recém-criado.
+7. Defina o secret `ADMIN_PASSWORD` no Cloudflare Pages:
+   - Settings → Environment Variables → Add production variable → "Encrypt" → nome `ADMIN_PASSWORD`.
+   - Repita para Preview/Dev. Use uma senha forte: é ela que libera o painel admin.
+8. Aplique a migration `migrations/001_init.sql` no D1 (aba Migrations).
+9. Abra a URL `https://<project>.pages.dev`. Done!
 
 ### Desenvolvimento local (opcional)
 - `npm i -g wrangler`
-- `wrangler pages dev public --d1=DB=estoque`
+- `wrangler pages dev public --d1=DB=estoque --kv=KV_BINDING=<nome-do-namespace> --binding ADMIN_PASSWORD=<senha>`
 - `wrangler d1 execute estoque --local --file=./migrations/001_init.sql`
+
+### Diagnóstico
+- Antes de fazer o deploy definitivo, rode `wrangler pages dev ...` e acesse `http://127.0.0.1:8788/api/estoque?op=ping`.
+- A resposta `{"ok":true}` confirma que o binding `KV_BINDING` está disponível (dev e produção).
+
+### Senha do painel admin
+- O modal de acesso envia a senha para `/api/admin-login` e recebe um token de sessão curto.
+- O token fica salvo em `sessionStorage` (ou em `localStorage` se o usuário marcar “manter sessão”).
+- Reponha o secret `ADMIN_PASSWORD` sempre que desejar invalidar as sessões existentes.
 
 ## Observações
 - O app permite múltiplos produtos por posição.

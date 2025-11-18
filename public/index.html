@@ -236,46 +236,87 @@
     }
 
     async function persistInventory() {
+      if (!ensureAdminSession()) return false;
       try {
         const isReset = inventory.length === 0 && history[0]?.type === 'RESET';
+        const authHeaders = getAuthHeaders();
         if (isReset) {
-            const r = await fetch('/api/estoque?op=reset', { method: 'POST' });
+            const r = await fetch('/api/estoque?op=reset', { method: 'POST', headers: { ...authHeaders } });
+            if (r.status === 401) { handleUnauthorized(); return false; }
             if (!r.ok) throw new Error('Falha ao resetar o estoque no servidor.');
             const d = await r.json();
             history = d.history || history;
-            return;
+            return true;
         }
-        
+
         const res = await fetch('/api/estoque', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ inventory, history }),
         });
+        if (res.status === 401) { handleUnauthorized(); return false; }
         if (!res.ok) throw new Error('Falha ao persistir inventário no servidor.');
+        return true;
       } catch (error) {
         console.error("Falha ao persistir inventário:", error);
         showToast('Erro de conexão ao salvar inventário.', 'error');
+        return false;
       }
     }
 
     async function persistProducts() {
+        if (!ensureAdminSession()) return false;
         try {
             const res = await fetch('/api/produtos', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                 body: JSON.stringify(productList.map(({nomeCompleto, ...rest}) => rest))
             });
+            if (res.status === 401) { handleUnauthorized(); return false; }
             if (!res.ok) throw new Error('Falha ao salvar produtos no servidor.');
+            return true;
         } catch (error) {
             console.error("Falha ao persistir produtos:", error);
             showToast('Erro de conexão ao salvar produtos.', 'error');
+            return false;
         }
     }
 
     const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','MEIO','FRENTE'] };
-    const adminPassword = '123';
-    let adminAuthenticated = false;
+    const ADMIN_TOKEN_KEY = 'estoque-admin-token';
+    let adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY) || null;
+    if (adminToken && !sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
+      sessionStorage.setItem(ADMIN_TOKEN_KEY, adminToken);
+    }
+    let adminAuthenticated = Boolean(adminToken);
     let lastVisitedHash = '#home';
+
+    const persistAdminToken = (token, remember = false) => {
+      adminToken = token;
+      adminAuthenticated = Boolean(token);
+      if (token) {
+        sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+        if (remember) {
+          localStorage.setItem(ADMIN_TOKEN_KEY, token);
+        } else {
+          localStorage.removeItem(ADMIN_TOKEN_KEY);
+        }
+      } else {
+        sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+        localStorage.removeItem(ADMIN_TOKEN_KEY);
+      }
+    };
+
+    const ensureAdminSession = () => {
+      if (!adminToken) {
+        showToast('Faça login para continuar.', 'error');
+        showAdminLoginModal();
+        return false;
+      }
+      return true;
+    };
+
+    const getAuthHeaders = () => (adminToken ? { Authorization: `Bearer ${adminToken}` } : {});
 
     let moveOperation = null; 
 
@@ -1076,9 +1117,10 @@
 
     const handleUndoLastAction = () => {
       showCustomConfirm('Tem certeza que deseja desfazer a última ação? Esta operação não pode ser revertida.', async () => {
-        if (history.length > 1) { 
+        if (history.length > 1) {
             history.shift();
-            await persistInventory();
+            const saved = await persistInventory();
+            if (!saved) return;
             showToast(`Última ação foi desfeita (no histórico).`);
             rerenderCurrentPage();
         }
@@ -1086,11 +1128,13 @@
     };
 
    const handleResetStock = () => {
+      if (!ensureAdminSession()) return;
       showCustomConfirm('ATENÇÃO! Apagar TODO o estoque é IRREVERSÍVEL.', () => {
         showCustomConfirm('CONFIRMAÇÃO FINAL: Apagar todo o estoque e histórico?', async () => {
           inventory = [];
           addHistory('RESET', 'O estoque foi completamente zerado.');
-          await persistInventory();
+          const saved = await persistInventory();
+          if (!saved) return;
           showToast('Estoque resetado com sucesso.', 'error');
           rerenderCurrentPage();
         });
@@ -1257,8 +1301,9 @@
         }
 
         addHistory('MOVIMENTAÇÃO', `${quantityToMove} cx de ${product?.nomeCompleto || 'Produto desconhecido'} de ${itemToMove.locationId} → ${destinationLocationId}`);
-        await persistInventory();
-        
+        const saved = await persistInventory();
+        if (!saved) return;
+
         showToast('Item movido com sucesso!');
         document.body.classList.remove('move-mode-active');
         moveOperation = null;
@@ -1278,7 +1323,8 @@
         }
 
         addHistory('ENTRADA', `+${quantity} caixas de ${product.nomeCompleto} em ${locationId}`);
-        await persistInventory();
+        const saved = await persistInventory();
+        if (!saved) return;
         showToast('Entrada registrada com sucesso!');
         preselectedLocation = null;
         if(window.location.hash !== '#mapa') goTo('#mapa');
@@ -1306,7 +1352,8 @@
         }
         
         addHistory('SAÍDA', `-${quantityToRemove} caixas de ${product?.nomeCompleto || 'Produto desconhecido'} de ${item.locationId}`);
-        await persistInventory();
+        const saved = await persistInventory();
+        if (!saved) return;
         showToast('Saída registrada com sucesso!');
         goTo('#mapa');
     }
@@ -1833,7 +1880,8 @@
             const productsWithId = newProducts.map(product => ({ id: nextId++, ...product }));
 
             productList.push(...productsWithId);
-            await persistProducts();
+            const saved = await persistProducts();
+            if (!saved) return;
             showToast(`${productsWithId.length} produto(s) cadastrados com sucesso!`);
             closeModal();
             rerenderCurrentPage();
@@ -1886,7 +1934,8 @@
             }
 
             productList.push({ ...newProduct, nomeCompleto: `${newProduct.modelo} ${newProduct.grade} ${newProduct.material} ${newProduct.variacao}` });
-            await persistProducts();
+            const saved = await persistProducts();
+            if (!saved) return;
             showToast('Produto cadastrado com sucesso!');
             closeModal();
             rerenderCurrentPage();
@@ -1947,19 +1996,52 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
             <h2 class="text-2xl font-bold">Acesso Restrito</h2>
-            <p class="text-sm text-gray-600">Insira a senha de administrador.</p>
+            <p class="text-sm text-gray-600">Insira a senha de administrador definida no Pages.</p>
             <div>
                 <label class="block text-sm font-medium text-gray-700">Senha</label>
                 <input type="password" id="password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
             </div>
-            <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Entrar</button>
+            <label class="flex items-center gap-2 text-sm text-gray-600">
+                <input type="checkbox" id="remember-session" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                Manter sessão nesta máquina
+            </label>
+            <p class="text-xs text-gray-500">A sessão expira automaticamente após ~30 minutos de inatividade.</p>
+            <button type="submit" id="admin-login-submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Entrar</button>
         </form>`;
       showModal(content);
-      document.getElementById('admin-login-form').addEventListener('submit', e => {
+      const form = document.getElementById('admin-login-form');
+      const submitBtn = document.getElementById('admin-login-submit');
+      form.addEventListener('submit', async e => {
         e.preventDefault();
-        const pw = document.getElementById('password').value;
-        if (pw === adminPassword) { adminAuthenticated = true; closeModal(); renderAdmin(); }
-        else showToast('Senha incorreta!', 'error');
+        const pw = document.getElementById('password').value.trim();
+        if (!pw) {
+          showToast('Informe a senha.', 'error');
+          return;
+        }
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Entrando...';
+        try {
+          const res = await fetch('/api/admin-login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pw })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data?.token) {
+            throw new Error(data?.error || 'Falha ao autenticar.');
+          }
+          const remember = document.getElementById('remember-session').checked;
+          persistAdminToken(data.token, remember);
+          showToast('Sessão iniciada!', 'success');
+          closeModal();
+          renderAdmin();
+        } catch (error) {
+          console.error('Falha no login administrativo:', error);
+          showToast(error?.message || 'Senha incorreta.', 'error');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Entrar';
+        }
       });
       document.getElementById('admin-login-close').addEventListener('click', () => {
           closeModal();
@@ -1980,6 +2062,16 @@
       showModal(content);
       document.getElementById('confirm-ok').onclick = () => { closeModal(); onConfirm(); };
       document.getElementById('confirm-cancel').onclick = closeModal;
+    };
+
+    const handleUnauthorized = () => {
+      const hadToken = Boolean(adminToken);
+      persistAdminToken(null);
+      if (hadToken) {
+        showToast('Sessão expirada. Faça login novamente.', 'error');
+      }
+      window.location.hash = '#admin';
+      navigate();
     };
 
     const showToast = (message, type='success') => {

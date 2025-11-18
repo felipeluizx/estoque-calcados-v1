@@ -1,4 +1,6 @@
 // functions/api/reset.js
+const SESSION_PREFIX = "admin-session:";
+
 async function addHistoryD1(env, type, details) {
   // Mantém seu histórico também no D1 (como já fazia)
   await env.DB.prepare(
@@ -18,7 +20,31 @@ function json(obj, status = 200) {
   });
 }
 
-export async function onRequestPost({ env }) {
+function getKvBinding(env) {
+  const kv = env?.KV_BINDING || env?.ESTOQUE_DB;
+  if (!kv || typeof kv.put !== "function") {
+    throw new Error("KV binding 'KV_BINDING'/'ESTOQUE_DB' não encontrado.");
+  }
+  return kv;
+}
+
+async function hasValidAdminSession(request, kv) {
+  const authHeader = request.headers.get("authorization") || "";
+  if (!authHeader.toLowerCase().startsWith("bearer ")) {
+    return false;
+  }
+  const token = authHeader.slice(7).trim();
+  if (!token) return false;
+  const session = await kv.get(`${SESSION_PREFIX}${token}`);
+  return Boolean(session);
+}
+
+export async function onRequestPost({ request, env }) {
+  const kv = getKvBinding(env);
+  const authorized = await hasValidAdminSession(request, kv);
+  if (!authorized) {
+    return json({ ok: false, error: "Token administrativo inválido ou ausente." }, 401);
+  }
   // 1) ZERA D1 (como já fazia antes)
   try {
     await env.DB.batch([
@@ -33,11 +59,7 @@ export async function onRequestPost({ env }) {
 
   // 2) ZERA KV (mantém o snapshot que o front usa)
   try {
-    const kv = env.ESTOQUE_DB; // mesmo binding usado em estoque.js
-    if (!kv || typeof kv.put !== "function") {
-      throw new Error("KV 'ESTOQUE_DB' não encontrado.");
-    }
-
+    
     const resetHistoryKV = [
       {
         date: new Date().toISOString(),

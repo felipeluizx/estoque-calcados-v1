@@ -8,7 +8,6 @@ database_name = "estoque"
 database_id = "local-estoque"
 
 [[kv_namespaces]]
-binding = "ESTOQUE_DB"
-# Substitua pelos IDs reais do seu namespace no painel da Cloudflare.
-id = "estoque-db"
-preview_id = "estoque-db"
+binding = "KV_BINDING"
+id = "6f3e5f7fc7864b64accffb8c04e7dbe3"
+preview_id = "6f3e5f7fc7864b64accffb8c04e7dbe3"

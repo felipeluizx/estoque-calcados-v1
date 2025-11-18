@@ -1605,6 +1605,16 @@
 
         const renderBulkRows = () => {
             const tbody = document.getElementById('bulk-rows-body');
+
+            const activeElement = document.activeElement;
+            const isBulkInput = activeElement && activeElement.classList && activeElement.classList.contains('bulk-input');
+            const focusedInputMeta = isBulkInput ? {
+                index: activeElement.dataset.index,
+                field: activeElement.dataset.field,
+                selectionStart: activeElement.selectionStart,
+                selectionEnd: activeElement.selectionEnd
+            } : null;
+
             currentErrors = validateRows();
             duplicateConflicts = detectExistingConflicts();
             const rowsHtml = bulkRows.map((row, index) => {
@@ -1638,6 +1648,17 @@
                 `;
             }).join('');
             tbody.innerHTML = rowsHtml;
+
+            if (focusedInputMeta) {
+                const selector = `.bulk-input[data-index="${focusedInputMeta.index}"][data-field="${focusedInputMeta.field}"]`;
+                const replacementInput = tbody.querySelector(selector);
+                if (replacementInput) {
+                    replacementInput.focus();
+                    if (typeof focusedInputMeta.selectionStart === 'number' && typeof focusedInputMeta.selectionEnd === 'number') {
+                        replacementInput.setSelectionRange(focusedInputMeta.selectionStart, focusedInputMeta.selectionEnd);
+                    }
+                }
+            }
 
             document.querySelectorAll('#bulk-rows-body .bulk-input').forEach(input => {
                 input.addEventListener('input', (e) => {

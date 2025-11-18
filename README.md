@@ -20,13 +20,21 @@ Pronto para deploy **grátis**.
    - Settings → Functions → D1 Bindings
    - Binding name: `DB` (exatamente)
    - Database: escolha o D1 criado
-6. Aplique a migration `migrations/001_init.sql` no D1 (aba Migrations).
-7. Abra a URL `https://<project>.pages.dev`. Done!
+6. Crie um namespace **Workers KV** e conecte o binding `ESTOQUE_DB`:
+   - Workers & Pages → KV → Create namespace (ex: `estoque-db`).
+   - No projeto Pages → Settings → Functions → KV Namespace bindings.
+   - Binding name: `ESTOQUE_DB` (preview **e** production) → escolha o namespace recém-criado.
+7. Aplique a migration `migrations/001_init.sql` no D1 (aba Migrations).
+8. Abra a URL `https://<project>.pages.dev`. Done!
 
 ### Desenvolvimento local (opcional)
 - `npm i -g wrangler`
-- `wrangler pages dev public --d1=DB=estoque`
+- `wrangler pages dev public --d1=DB=estoque --kv=ESTOQUE_DB=<nome-do-namespace>`
 - `wrangler d1 execute estoque --local --file=./migrations/001_init.sql`
+
+### Diagnóstico
+- Antes de fazer o deploy definitivo, rode `wrangler pages dev ...` e acesse `http://127.0.0.1:8788/api/estoque?op=ping`.
+- A resposta `{"ok":true}` confirma que o binding `ESTOQUE_DB` está disponível (dev e produção).
 
 ## Observações
 - O app permite múltiplos produtos por posição.

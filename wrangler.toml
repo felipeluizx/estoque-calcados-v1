@@ -6,3 +6,9 @@ compatibility_date = "2024-10-01"
 binding = "DB"
 database_name = "estoque"
 database_id = "local-estoque"
+
+[[kv_namespaces]]
+binding = "ESTOQUE_DB"
+# Substitua pelos IDs reais do seu namespace no painel da Cloudflare.
+id = "estoque-db"
+preview_id = "estoque-db"

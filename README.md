@@ -49,5 +49,73 @@ Pronto para deploy **grátis**.
 - Relatórios com multi-seleção, exportar CSV e imprimir.
 - Mapa com filtros (Modelo → Grade → Cor) e busca livre.
 - PWA básico incluso (instalável no celular).
+- Gerador de etiquetas com templates configuráveis, exportação em PDF/PNG e suporte a tiragens customizadas.
+
+## Templates de etiquetas
+1. Salve a arte base em `public/assets/templates`. Prefira SVGs (texto puro) para manter o repositório compatível com este fluxo; se precisar usar PNG/JPG, converta para `data:` URL ou hospede externamente. O exemplo `etiqueta-padrao-100x25.svg` tem 1181×295 px ≈ 100×25 mm a 300 DPI.
+2. Autentique-se no painel admin para obter o token salvo em `sessionStorage['estoque-admin-token']`.
+3. Faça um `POST` para `/api/produtos` contendo os produtos e os templates. Estrutura esperada:
+
+```json
+{
+  "products": [
+    { "id": 1001, "modelo": "Tênis X", "grade": "BAIXA", "material": "Lona", "variacao": "Azul", "sku": "TNX-BA-AZ" }
+  ],
+  "labelTemplates": [
+    {
+      "id": "std-100x25",
+      "name": "Etiqueta padrão 100×25 mm",
+      "artPath": "/assets/templates/etiqueta-padrao-100x25.svg",
+      "canvas": { "width": 1181, "height": 295 },
+      "fields": [
+        {
+          "id": "modelo",
+          "label": "Modelo",
+          "type": "text",
+          "source": "modelo",
+          "valueTemplate": "{{modelo}}",
+          "x": 160,
+          "y": 70,
+          "font": "700 64px 'Inter', sans-serif",
+          "color": "#111827",
+          "align": "left",
+          "baseline": "alphabetic"
+        },
+        {
+          "id": "tamanho",
+          "label": "Numeração",
+          "type": "text",
+          "source": "tamanho",
+          "valueTemplate": "{{tamanho}}",
+          "x": 980,
+          "y": 170,
+          "font": "700 140px 'Inter', sans-serif",
+          "color": "#111827",
+          "align": "center",
+          "baseline": "middle"
+        }
+      ],
+      "qrCodes": [
+        {
+          "id": "principal",
+          "label": "QR principal",
+          "size": 220,
+          "x": 900,
+          "y": 30,
+          "dataTemplate": "SKU={{skuCompleto}};SIZE={{tamanho}};GRADE={{gradeTipo}};COR={{variacao}}",
+          "correctionLevel": "H"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Campos suportados
+- `valueTemplate` aceita tokens `{{chave}}` com qualquer atributo do produto e variáveis do gerador (`tamanho`, `gradeTipo`, `skuCurto`, `skuCompleto`, `quantidadeAtual`, `quantidadePorTamanho`, `etiquetaExtra`, `produtoId`).
+- `fields` definem a posição (`x`, `y`), fonte e alinhamento do texto no canvas.
+- `qrCodes` usam o mesmo sistema de template na propriedade `dataTemplate` e aceitam `size`, `x`, `y` e `correctionLevel` (`L`, `M`, `Q`, `H`).
+
+Envie o JSON com `curl` (usando o token Bearer do admin) ou ajuste os dados localmente e utilize o botão “Salvar produtos” para persistir no KV. Depois disso os templates ficam disponíveis no gerador localizado em `#etiquetas`, com suporte a grades pré-configuradas, tiragens unitárias e páginas extras (13/14).
 
 2025-09-13

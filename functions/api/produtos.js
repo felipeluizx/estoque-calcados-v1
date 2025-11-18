@@ -30,19 +30,43 @@ async function hasValidAdminSession(request, kv) {
   return Boolean(session);
 }
 
+const isValidPayload = (payload) => {
+  if (Array.isArray(payload)) {
+    return true;
+  }
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  return Array.isArray(payload.products) && Array.isArray(payload.labelTemplates);
+};
+
+const normalizePayload = (payload) => {
+  if (Array.isArray(payload)) {
+    return { products: payload, labelTemplates: [] };
+  }
+  if (payload && typeof payload === "object") {
+    const products = Array.isArray(payload.products) ? payload.products : [];
+    const labelTemplates = Array.isArray(payload.labelTemplates)
+      ? payload.labelTemplates
+      : [];
+    return { products, labelTemplates };
+  }
+  return { products: [], labelTemplates: [] };
+};
+
 // Handler para buscar a lista de produtos
 export const onRequestGet = async ({ env }) => {
   try {
     const kv = assertKV(env);
     const productListJson = await kv.get("products");
-    const productList = productListJson ? JSON.parse(productListJson) : [];
-    return json(productList);
+    const payload = productListJson ? JSON.parse(productListJson) : [];
+    return json(normalizePayload(payload));
   } catch (err) {
     return json({ error: err.message }, 500);
   }
 };
 
-// Handler para salvar a lista de produtos
+// Handler para salvar a lista de produtos + templates
 export const onRequestPost = async ({ request, env }) => {
   try {
     const kv = assertKV(env);
@@ -50,14 +74,17 @@ export const onRequestPost = async ({ request, env }) => {
     if (!authorized) {
       return json({ ok: false, error: "Token administrativo inválido ou ausente." }, 401);
     }
-    const productList = await request.json();
-
-    if (!Array.isArray(productList)) {
-      return json({ error: "O corpo da requisição deve ser um array de produtos." }, 400);
+    const payload = await request.json();
+    if (!isValidPayload(payload)) {
+      return json(
+        { ok: false, error: "Payload inválido. Envie produtos/labelTemplates em formato de array." },
+        400,
+      );
     }
+    const normalized = normalizePayload(payload);
 
-    await kv.put("products", JSON.stringify(productList));
-    return json({ ok: true, message: "Lista de produtos salva com sucesso." });
+    await kv.put("products", JSON.stringify(normalized));
+    return json({ ok: true, message: "Lista de produtos/templates salva com sucesso." });
   } catch (err) {
     return json({ error: err.message }, 500);
   }

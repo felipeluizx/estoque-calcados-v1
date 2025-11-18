@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1181" height="295" viewBox="0 0 1181 295">
+  <defs>
+    <linearGradient id="bg" x1="0%" x2="100%" y1="0%" y2="100%">
+      <stop offset="0%" stop-color="#f9fafb" />
+      <stop offset="100%" stop-color="#e5e7eb" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" x2="100%" y1="0%" y2="0%">
+      <stop offset="0%" stop-color="#9333ea" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+  <rect width="1181" height="295" rx="28" fill="url(#bg)" />
+  <rect x="32" y="32" width="14" height="231" rx="7" fill="url(#accent)" />
+  <rect x="79" y="32" width="1024" height="231" rx="24" fill="#ffffff" stroke="#d1d5db" />
+  <rect x="950" y="48" width="180" height="180" rx="16" fill="#111827" opacity="0.05" />
+  <text x="110" y="94" font-family="Inter, 'Segoe UI', sans-serif" font-weight="700" font-size="62" fill="#111827">Modelo</text>
+  <text x="110" y="150" font-family="Inter, 'Segoe UI', sans-serif" font-weight="500" font-size="46" fill="#374151">Variação</text>
+  <text x="110" y="202" font-family="Inter, 'Segoe UI', sans-serif" font-weight="500" font-size="32" fill="#4b5563">Material</text>
+  <text x="110" y="244" font-family="Inter, 'Segoe UI', sans-serif" font-weight="600" font-size="32" fill="#1f2937">Grade 00/00</text>
+  <text x="1030" y="244" font-family="Inter, 'Segoe UI', sans-serif" font-weight="600" font-size="38" fill="#111827" text-anchor="end">SKU0000</text>
+  <text x="1040" y="170" font-family="Inter, 'Segoe UI', sans-serif" font-weight="700" font-size="138" fill="#111827" text-anchor="middle" dominant-baseline="middle">40</text>
+</svg>

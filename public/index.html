@@ -606,10 +606,14 @@
         container.innerHTML = `
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                 <h1 class="text-3xl font-bold">Gestão de Produtos</h1>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-wrap">
                     <button id="print-products-btn" class="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 font-semibold flex items-center gap-2 disabled:opacity-50" disabled>
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-printer"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
                         Imprimir/Baixar
+                    </button>
+                    <button id="bulk-add-products-btn" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 font-semibold flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layers"><path d="m12.59 3.17 8.16 4.07a1 1 0 0 1 0 1.78l-8.16 4.07a1 1 0 0 1-.86 0L3.57 9.02a1 1 0 0 1 0-1.78l8.16-4.07a1 1 0 0 1 .86 0Z"/><path d="m3.6 10.44 8.16 4.07a1 1 0 0 0 .86 0l8.16-4.07"/><path d="m3.6 15.44 8.16 4.07a1 1 0 0 0 .86 0l8.16-4.07"/></svg>
+                        Cadastro em massa
                     </button>
                     <button id="add-product-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
@@ -648,6 +652,7 @@
         `;
 
         document.getElementById('add-product-btn').addEventListener('click', showAddProductModal);
+        document.getElementById('bulk-add-products-btn').addEventListener('click', showBulkAddProductsModal);
         
         const printBtn = document.getElementById('print-products-btn');
         const selectAllCheckbox = document.getElementById('select-all-products');
@@ -1495,6 +1500,325 @@
             await registerExit(inventoryIndex, quantity);
             closeModal();
         });
+    }
+
+    function showBulkAddProductsModal() {
+        const buildNomeCompleto = (row) => {
+            return ['modelo', 'grade', 'material', 'variacao']
+                .map(field => row[field].trim())
+                .filter(Boolean)
+                .join(' ');
+        };
+
+        const buildComboKey = (row) => {
+            const values = ['modelo', 'grade', 'material', 'variacao'].map(field => (row[field] || '').trim().toLowerCase());
+            if (values.some(v => !v)) return null;
+            return values.join('|');
+        };
+
+        const existingProductsMap = new Map();
+        productList.forEach(product => {
+            const key = buildComboKey(product);
+            if (key) existingProductsMap.set(key, product);
+        });
+
+        const createEmptyRow = (base = {}) => {
+            const row = {
+                modelo: base.modelo || '',
+                grade: base.grade || '',
+                material: base.material || '',
+                variacao: base.variacao || '',
+                nomeCompleto: base.nomeCompleto || ''
+            };
+            row.nomeCompleto = buildNomeCompleto(row);
+            return row;
+        };
+
+        let bulkRows = [createEmptyRow()];
+        let currentErrors = [];
+        let duplicateConflicts = [];
+        let previewRows = null;
+
+        const validateRows = () => {
+            const errors = [];
+            const combos = new Map();
+            bulkRows.forEach((row, index) => {
+                const missingFields = ['modelo', 'grade', 'material', 'variacao'].filter(field => !row[field].trim());
+                if (missingFields.length) {
+                    errors.push({ index, message: 'Preencha todos os campos.' });
+                }
+                const key = buildComboKey(row);
+                if (key && !missingFields.length) {
+                    if (combos.has(key)) {
+                        const firstIndex = combos.get(key);
+                        errors.push({ index, message: `Combinação repetida com a linha ${firstIndex + 1}.` });
+                        errors.push({ index: firstIndex, message: `Combinação repetida com a linha ${index + 1}.` });
+                    } else {
+                        combos.set(key, index);
+                    }
+                }
+            });
+            return errors;
+        };
+
+        const detectExistingConflicts = () => {
+            const conflicts = [];
+            bulkRows.forEach((row, index) => {
+                const key = buildComboKey(row);
+                if (!key) return;
+                const existing = existingProductsMap.get(key);
+                if (existing) {
+                    conflicts.push({ index, message: `Combinação já cadastrada (#${existing.id}).`, product: existing });
+                }
+            });
+            return conflicts;
+        };
+
+        const renderPreviewPanel = () => {
+            const previewContainer = document.getElementById('bulk-preview');
+            const duplicatesContainer = document.getElementById('bulk-duplicate-info');
+            if (duplicatesContainer) {
+                duplicatesContainer.textContent = duplicateConflicts.length
+                    ? `⚠️ ${duplicateConflicts.length} combinação(ões) já existe(m) no cadastro. Revise antes de prosseguir.`
+                    : '';
+            }
+            if (!previewContainer) return;
+            if (!previewRows || !previewRows.length) {
+                previewContainer.innerHTML = '<p class="text-sm text-gray-500">Clique em "Pré-visualizar" para ver o resumo das combinações geradas.</p>';
+                return;
+            }
+            const conflictCount = previewRows.filter(item => item.conflictProduct).length;
+            const listItems = previewRows.map((item, idx) => `
+                <li class="p-2 rounded border ${item.conflictProduct ? 'border-red-200 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-700'}">
+                    <div class="flex justify-between items-center gap-4">
+                        <span class="font-semibold text-sm">${idx + 1}. ${item.nomeCompleto}</span>
+                        ${item.conflictProduct ? `<span class="text-xs font-semibold">Já cadastrado (#${item.conflictProduct.id})</span>` : '<span class="text-xs font-semibold">Novo</span>'}
+                    </div>
+                    <p class="text-xs mt-1 text-gray-600">${item.modelo} • ${item.grade} • ${item.material} • ${item.variacao}</p>
+                </li>
+            `).join('');
+            previewContainer.innerHTML = `
+                <p class="text-xs text-gray-500 mb-2">Total: ${previewRows.length} combinação(ões)${conflictCount ? ` • ${conflictCount} em conflito` : ''}</p>
+                <ul class="space-y-2 max-h-48 overflow-y-auto pr-1">${listItems}</ul>
+            `;
+        };
+
+        const renderBulkRows = () => {
+            const tbody = document.getElementById('bulk-rows-body');
+            currentErrors = validateRows();
+            duplicateConflicts = detectExistingConflicts();
+            const rowsHtml = bulkRows.map((row, index) => {
+                const rowErrors = [...new Set([
+                    ...currentErrors.filter(err => err.index === index).map(err => err.message),
+                    ...duplicateConflicts.filter(conf => conf.index === index).map(conf => conf.message)
+                ])];
+                return `
+                    <tr class="align-top">
+                        ${['modelo','grade','material','variacao'].map(field => `
+                            <td class="p-2 border">
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center gap-2">
+                                        <input type="text" class="bulk-input w-full p-2 border border-gray-300 rounded-md" data-index="${index}" data-field="${field}" value="${row[field] || ''}" />
+                                        <button type="button" class="copy-below-btn text-xs text-blue-600" data-index="${index}" data-field="${field}">copiar abaixo</button>
+                                    </div>
+                                </div>
+                            </td>
+                        `).join('')}
+                        <td class="p-2 border text-sm">
+                            <p class="font-semibold">${row.nomeCompleto || '<span class="text-gray-500">Aguardando campos...</span>'}</p>
+                            ${rowErrors.length ? `<p class="text-xs text-red-600 mt-1">${rowErrors.join(' | ')}</p>` : ''}
+                        </td>
+                        <td class="p-2 border w-32">
+                            <div class="flex flex-col gap-2">
+                                <button type="button" class="duplicate-row-btn px-2 py-1 rounded bg-blue-100 text-blue-700 text-xs" data-index="${index}">Duplicar linha</button>
+                                <button type="button" class="remove-row-btn px-2 py-1 rounded bg-red-100 text-red-700 text-xs ${bulkRows.length === 1 ? 'opacity-50 cursor-not-allowed' : ''}" data-index="${index}" ${bulkRows.length === 1 ? 'disabled' : ''}>Remover</button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            tbody.innerHTML = rowsHtml;
+
+            document.querySelectorAll('#bulk-rows-body .bulk-input').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    const index = parseInt(e.target.dataset.index, 10);
+                    const field = e.target.dataset.field;
+                    bulkRows[index][field] = e.target.value;
+                    bulkRows[index].nomeCompleto = buildNomeCompleto(bulkRows[index]);
+                    previewRows = null;
+                    renderBulkRows();
+                });
+            });
+
+            document.querySelectorAll('#bulk-rows-body .remove-row-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index, 10);
+                    if (bulkRows.length === 1) return;
+                    bulkRows.splice(index, 1);
+                    previewRows = null;
+                    renderBulkRows();
+                });
+            });
+
+            document.querySelectorAll('#bulk-rows-body .duplicate-row-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index, 10);
+                    const clone = createEmptyRow(bulkRows[index]);
+                    clone.nomeCompleto = buildNomeCompleto(clone);
+                    bulkRows.splice(index + 1, 0, clone);
+                    previewRows = null;
+                    renderBulkRows();
+                });
+            });
+
+            document.querySelectorAll('#bulk-rows-body .copy-below-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const index = parseInt(btn.dataset.index, 10);
+                    const field = btn.dataset.field;
+                    const value = bulkRows[index][field];
+                    for (let i = index + 1; i < bulkRows.length; i++) {
+                        bulkRows[i][field] = value;
+                        bulkRows[i].nomeCompleto = buildNomeCompleto(bulkRows[i]);
+                    }
+                    previewRows = null;
+                    renderBulkRows();
+                });
+            });
+
+            const validationContainer = document.getElementById('bulk-validation');
+            if (validationContainer) {
+                const hasErrors = currentErrors.length > 0;
+                validationContainer.textContent = hasErrors ? 'Resolva os campos destacados antes de continuar.' : '';
+            }
+
+            const saveBtn = document.getElementById('save-bulk-products');
+            if (saveBtn) {
+                const hasEmptyRows = bulkRows.some(row => !row.modelo.trim() || !row.grade.trim() || !row.material.trim() || !row.variacao.trim());
+                saveBtn.disabled = currentErrors.length > 0 || duplicateConflicts.length > 0 || hasEmptyRows;
+            }
+
+            renderPreviewPanel();
+        };
+
+        const content = `
+            <div class="p-6 space-y-4">
+                <h3 class="text-xl font-bold">Cadastro em Massa</h3>
+                <p class="text-sm text-gray-600">Preencha os dados das combinações desejadas e utilize os atalhos para acelerar o preenchimento.</p>
+                <form id="bulk-add-form" class="space-y-4">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm border border-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="p-2 border text-left">Modelo</th>
+                                    <th class="p-2 border text-left">Grade</th>
+                                    <th class="p-2 border text-left">Material</th>
+                                    <th class="p-2 border text-left">Variação/Cor</th>
+                                    <th class="p-2 border text-left">Resumo</th>
+                                    <th class="p-2 border text-left">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bulk-rows-body"></tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <button type="button" id="add-bulk-row" class="px-3 py-2 rounded-md bg-green-100 text-green-700 text-sm">Adicionar linha</button>
+                        <p class="text-xs text-gray-500">Dica: use "copiar abaixo" para repetir valores de uma coluna rapidamente.</p>
+                    </div>
+                    <div class="space-y-1">
+                        <div id="bulk-validation" class="text-sm text-red-600"></div>
+                        <div id="bulk-duplicate-info" class="text-sm text-amber-600"></div>
+                    </div>
+                    <div class="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
+                        <div class="flex items-center justify-between gap-3 flex-wrap">
+                            <div>
+                                <p class="text-sm font-semibold text-gray-700">Pré-visualização</p>
+                                <p class="text-xs text-gray-500">Valide as combinações e confira os conflitos antes de cadastrar.</p>
+                            </div>
+                            <button type="button" id="preview-bulk-products" class="px-3 py-1.5 rounded-md bg-indigo-100 text-indigo-700 text-sm font-medium">Pré-visualizar</button>
+                        </div>
+                        <div id="bulk-preview" class="text-sm text-gray-700"></div>
+                    </div>
+                    <div class="flex justify-end gap-3">
+                        <button type="button" class="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300" id="cancel-bulk-btn">Cancelar</button>
+                        <button type="submit" id="save-bulk-products" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">Cadastrar produtos</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        showModal(content, 'max-w-5xl');
+
+        document.getElementById('add-bulk-row').addEventListener('click', () => {
+            bulkRows.push(createEmptyRow());
+            previewRows = null;
+            renderBulkRows();
+        });
+
+        document.getElementById('cancel-bulk-btn').addEventListener('click', () => closeModal());
+
+        document.getElementById('preview-bulk-products').addEventListener('click', () => {
+            currentErrors = validateRows();
+            if (currentErrors.length) {
+                renderBulkRows();
+                showToast('Corrija os erros antes de pré-visualizar.', 'error');
+                return;
+            }
+            previewRows = bulkRows.map((row, index) => {
+                const trimmedRow = {
+                    modelo: row.modelo.trim(),
+                    grade: row.grade.trim(),
+                    material: row.material.trim(),
+                    variacao: row.variacao.trim()
+                };
+                const key = buildComboKey(trimmedRow);
+                const conflictProduct = key ? existingProductsMap.get(key) : null;
+                return {
+                    ...trimmedRow,
+                    nomeCompleto: buildNomeCompleto(trimmedRow),
+                    conflictProduct,
+                    index
+                };
+            });
+            renderPreviewPanel();
+        });
+
+        document.getElementById('bulk-add-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            currentErrors = validateRows();
+            if (currentErrors.length) {
+                renderBulkRows();
+                showToast('Corrija os erros antes de salvar.', 'error');
+                return;
+            }
+
+            duplicateConflicts = detectExistingConflicts();
+            if (duplicateConflicts.length) {
+                renderBulkRows();
+                showToast('Resolva as duplicidades antes de cadastrar.', 'error');
+                return;
+            }
+
+            const newProducts = bulkRows.map(row => {
+                const trimmedRow = {
+                    modelo: row.modelo.trim(),
+                    grade: row.grade.trim(),
+                    material: row.material.trim(),
+                    variacao: row.variacao.trim()
+                };
+                return { ...trimmedRow, nomeCompleto: buildNomeCompleto(trimmedRow) };
+            });
+
+            let nextId = productList.length ? Math.max(...productList.map(p => p.id)) + 1 : 1;
+            const productsWithId = newProducts.map(product => ({ id: nextId++, ...product }));
+
+            productList.push(...productsWithId);
+            await persistProducts();
+            showToast(`${productsWithId.length} produto(s) cadastrados com sucesso!`);
+            closeModal();
+            rerenderCurrentPage();
+        });
+
+        renderBulkRows();
     }
 
     function showAddProductModal() {

@@ -30,6 +30,16 @@ async function hasValidAdminSession(request, kv) {
   return Boolean(session);
 }
 
+const isValidPayload = (payload) => {
+  if (Array.isArray(payload)) {
+    return true;
+  }
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  return Array.isArray(payload.products) && Array.isArray(payload.labelTemplates);
+};
+
 const normalizePayload = (payload) => {
   if (Array.isArray(payload)) {
     return { products: payload, labelTemplates: [] };
@@ -65,6 +75,12 @@ export const onRequestPost = async ({ request, env }) => {
       return json({ ok: false, error: "Token administrativo inválido ou ausente." }, 401);
     }
     const payload = await request.json();
+    if (!isValidPayload(payload)) {
+      return json(
+        { ok: false, error: "Payload inválido. Envie produtos/labelTemplates em formato de array." },
+        400,
+      );
+    }
     const normalized = normalizePayload(payload);
 
     await kv.put("products", JSON.stringify(normalized));

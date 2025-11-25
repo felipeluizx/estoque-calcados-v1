@@ -1,3 +1,4 @@
+import { ensureAdminAuth } from "../../../../lib/admin.js";
 import { loadList } from "../../../../lib/separation.js";
 
 const json = (obj, status = 200) =>
@@ -6,8 +7,11 @@ const json = (obj, status = 200) =>
     headers: { "content-type": "application/json; charset=utf-8" },
   });
 
-export async function onRequestPost({ env, params }) {
+export async function onRequestPost({ request, env, params }) {
   try {
+    const { response } = await ensureAdminAuth(request, env);
+    if (response) return response;
+
     const listId = params.id;
     const list = await loadList(env, listId);
     if (!list) return json({ error: "lista não encontrada" }, 404);

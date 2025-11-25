@@ -1,3 +1,5 @@
+import { ensureAdminAuth } from "../../lib/admin.js";
+
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
     status,
@@ -6,6 +8,9 @@ const json = (obj, status = 200) =>
 
 export async function onRequestPost({ request, env }) {
   try {
+    const { response } = await ensureAdminAuth(request, env);
+    if (response) return response;
+
     const payload = await request.json().catch(() => null);
     const maxMoves = Number(payload?.maxMoves);
     const threshold = Number(payload?.threshold);

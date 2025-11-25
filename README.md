@@ -37,7 +37,11 @@ Pronto para deploy **grátis**.
 - `wrangler d1 execute estoque --local --file=./migrations/002_separation_routes.sql`
 - `wrangler d1 execute estoque --local --file=./migrations/003_route_step_actions.sql`
 
-Endpoints de separação: `/api/separacao/listas` (CRUD) e rotas geradas com confirmação de passos em `/api/separacao/rotas/:id/confirmar` (suporta modo `simulate`).
+Endpoints de separação/otimização (todos exigem Bearer token do admin):
+- `POST/GET /api/separacao/listas` e `GET/PUT /api/separacao/listas/:id` para criar/consultar/atualizar listas.
+- `POST /api/separacao/listas/:id/gerar-rota` gera rota de picking a partir do inventário.
+- `POST /api/separacao/rotas/:id/confirmar` executa (ou simula) os passos `PICK`/`MOVE_*`, atualizando D1 e o snapshot em KV.
+- `POST /api/otimizacao/gerar-rota` sugere rota de consolidação com `maxMoves` e `threshold`.
 
 ### Diagnóstico
 - Antes de fazer o deploy definitivo, rode `wrangler pages dev ...` e acesse `http://127.0.0.1:8788/api/estoque?op=ping`.

@@ -5,6 +5,8 @@ import {
   findInventoryByLocation,
 } from "../../../../lib/movements.js";
 import { loadRoute } from "../../../../lib/separation.js";
+import { ensureAdminAuth } from "../../../../lib/admin.js";
+import { refreshKvSnapshot } from "../../../../lib/snapshot.js";
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
@@ -110,6 +112,9 @@ async function processStep(env, step, simulate) {
 
 export async function onRequestPost({ request, env, params }) {
   try {
+    const { kv, response } = await ensureAdminAuth(request, env);
+    if (response) return response;
+
     const payload = await request.json().catch(() => ({}));
     const simulate = Boolean(payload.simulate);
     const stepId = payload.stepId || payload.step_id;
@@ -171,11 +176,13 @@ export async function onRequestPost({ request, env, params }) {
       : await runInTransaction(env, executor);
 
     const updatedRoute = await loadRoute(env, route.id);
+    const snapshot = simulate ? null : await refreshKvSnapshot(env, kv);
 
     return json({
       simulate,
       processed: processedSteps,
       route: updatedRoute,
+      snapshot,
     });
   } catch (err) {
     return json({ error: String(err?.message || err) }, 500);

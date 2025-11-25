@@ -1,3 +1,4 @@
+import { ensureAdminAuth } from "../../lib/admin.js";
 import { loadList, loadLists } from "../../lib/separation.js";
 
 const json = (obj, status = 200) =>
@@ -6,8 +7,11 @@ const json = (obj, status = 200) =>
     headers: { "content-type": "application/json; charset=utf-8" },
   });
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
   try {
+    const { response } = await ensureAdminAuth(request, env);
+    if (response) return response;
+
     const lists = await loadLists(env);
     return json(lists);
   } catch (err) {
@@ -17,6 +21,9 @@ export async function onRequestGet({ env }) {
 
 export async function onRequestPost({ request, env }) {
   try {
+    const { response } = await ensureAdminAuth(request, env);
+    if (response) return response;
+
     const payload = await request.json().catch(() => null);
     if (!payload || typeof payload.name !== "string" || !Array.isArray(payload.items)) {
       return json({ error: "payload inválido" }, 400);

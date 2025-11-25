@@ -37,6 +37,8 @@ Pronto para deploy **grátis**.
 - `wrangler d1 execute estoque --local --file=./migrations/002_separation_routes.sql`
 - `wrangler d1 execute estoque --local --file=./migrations/003_route_step_actions.sql`
 
+Endpoints de separação: `/api/separacao/listas` (CRUD) e rotas geradas com confirmação de passos em `/api/separacao/rotas/:id/confirmar` (suporta modo `simulate`).
+
 ### Diagnóstico
 - Antes de fazer o deploy definitivo, rode `wrangler pages dev ...` e acesse `http://127.0.0.1:8788/api/estoque?op=ping`.
 - A resposta `{"ok":true}` confirma que o binding `KV_BINDING` está disponível (dev e produção).

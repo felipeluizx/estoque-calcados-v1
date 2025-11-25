@@ -69,3 +69,11 @@ export async function applyMove(env, { fromLocationId, toLocationId, productId, 
     moved: quantity,
   };
 }
+
+export async function findInventoryByLocation(env, { locationId, productId }) {
+  return env.DB.prepare(
+    "SELECT id, locationId, productId, quantity FROM inventory WHERE locationId=? AND productId=?"
+  )
+    .bind(locationId, productId)
+    .first();
+}

@@ -27,13 +27,14 @@ Pronto para deploy **grátis**.
 7. Defina o secret `ADMIN_PASSWORD` no Cloudflare Pages:
    - Settings → Environment Variables → Add production variable → "Encrypt" → nome `ADMIN_PASSWORD`.
    - Repita para Preview/Dev. Use uma senha forte: é ela que libera o painel admin.
-8. Aplique a migration `migrations/001_init.sql` no D1 (aba Migrations).
+8. Aplique as migrations no D1 (aba Migrations), na ordem: `migrations/001_init.sql` e `migrations/002_separation_routes.sql`.
 9. Abra a URL `https://<project>.pages.dev`. Done!
 
 ### Desenvolvimento local (opcional)
 - `npm i -g wrangler`
 - `wrangler pages dev public --d1=DB=estoque --kv=KV_BINDING=<nome-do-namespace> --binding ADMIN_PASSWORD=<senha>`
 - `wrangler d1 execute estoque --local --file=./migrations/001_init.sql`
+- `wrangler d1 execute estoque --local --file=./migrations/002_separation_routes.sql`
 
 ### Diagnóstico
 - Antes de fazer o deploy definitivo, rode `wrangler pages dev ...` e acesse `http://127.0.0.1:8788/api/estoque?op=ping`.

@@ -1,5 +1,5 @@
 const SESSION_PREFIX = "admin-session:";
-const SESSION_TTL_SECONDS = 60 * 30; // 30 minutos
+const SESSION_TTL_SECONDS = 60 * 60 * 24; // 24 horas
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
@@ -21,6 +21,7 @@ function getKvBinding(env) {
 export const onRequestPost = async ({ request, env }) => {
   try {
     const adminPassword = env?.ADMIN_PASSWORD;
+    const adminUsername = env?.ADMIN_USERNAME || env?.ADMIN_USER || "";
     if (!adminPassword) {
       return json({ ok: false, error: "ADMIN_PASSWORD não configurado." }, 500);
     }
@@ -35,8 +36,17 @@ export const onRequestPost = async ({ request, env }) => {
     }
 
     const providedPassword = body?.password;
+    const providedUser = body?.username?.trim?.();
     if (!providedPassword) {
       return json({ ok: false, error: "Campo 'password' é obrigatório." }, 400);
+    }
+
+    if (adminUsername && !providedUser) {
+      return json({ ok: false, error: "Usuário obrigatório." }, 400);
+    }
+
+    if (adminUsername && providedUser !== adminUsername) {
+      return json({ ok: false, error: "Usuário ou senha incorretos." }, 401);
     }
 
     if (providedPassword !== adminPassword) {

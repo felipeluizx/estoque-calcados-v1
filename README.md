@@ -24,9 +24,10 @@ Pronto para deploy **grátis**.
    - Workers & Pages → KV → Create namespace (ex: `estoque-db`).
    - No projeto Pages → Settings → Functions → KV Namespace bindings.
    - Binding name: `KV_BINDING` (preview **e** production) → escolha o namespace recém-criado.
-7. Defina o secret `ADMIN_PASSWORD` no Cloudflare Pages:
-   - Settings → Environment Variables → Add production variable → "Encrypt" → nome `ADMIN_PASSWORD`.
-   - Repita para Preview/Dev. Use uma senha forte: é ela que libera o painel admin.
+7. Defina as variáveis secretas de login no Cloudflare Pages:
+   - Obrigatória: `ADMIN_PASSWORD` (Settings → Environment Variables → Encrypt → `ADMIN_PASSWORD`).
+   - Opcional: `ADMIN_USERNAME` caso deseje exigir usuário + senha (senão o login aceita só senha).
+   - Repita para Preview/Dev. A sessão fica ativa por até 24h.
 8. Aplique as migrations no D1 (aba Migrations), na ordem: `migrations/001_init.sql`, `migrations/002_separation_routes.sql` e `migrations/003_route_step_actions.sql`.
 9. Abra a URL `https://<project>.pages.dev`. Done!
 
@@ -48,9 +49,9 @@ Endpoints de separação/otimização (todos exigem Bearer token do admin):
 - A resposta `{"ok":true}` confirma que o binding `KV_BINDING` está disponível (dev e produção).
 
 ### Senha do painel admin
-- O modal de acesso envia a senha para `/api/admin-login` e recebe um token de sessão curto.
-- O token fica salvo em `sessionStorage` (ou em `localStorage` se o usuário marcar “manter sessão”).
-- Reponha o secret `ADMIN_PASSWORD` sempre que desejar invalidar as sessões existentes.
+- O login agora acontece em uma página dedicada, que envia usuário (opcional) e senha para `/api/admin-login`, validando contra os segredos `ADMIN_PASSWORD` e opcionalmente `ADMIN_USERNAME`.
+- O token fica salvo por até **24h** em `sessionStorage` (ou em `localStorage` se o usuário marcar “manter sessão”).
+- Reponha os secrets `ADMIN_PASSWORD`/`ADMIN_USERNAME` sempre que desejar invalidar as sessões existentes.
 
 ## Observações
 - O app permite múltiplos produtos por posição.

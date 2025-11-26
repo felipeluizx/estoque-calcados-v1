@@ -25,6 +25,19 @@
     select:disabled { background-color: #e9ecef; cursor: not-allowed; }
     .map-card-position { transition: all 0.2s ease-in-out; }
 
+    .login-hero {
+      background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.12), transparent 25%),
+                  radial-gradient(circle at 80% 0%, rgba(99, 102, 241, 0.15), transparent 30%),
+                  linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+    }
+    .login-badge {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+    }
+    .login-card {
+      box-shadow: 0 20px 50px -24px rgba(59, 130, 246, 0.4);
+    }
+
     /* Estilos para o novo modo de movimentação */
     .move-mode-active .map-card-position {
         background-color: #cceeff;
@@ -96,7 +109,62 @@
 </head>
 <body class="antialiased text-gray-800">
 
-  <div id="app" class="flex flex-col md:flex-row min-h-screen">
+  <div id="login-page" class="login-hero min-h-screen flex items-center justify-center px-4 py-10">
+    <div class="max-w-5xl w-full grid md:grid-cols-2 gap-8 items-center">
+      <div class="space-y-4">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-blue-700 text-xs font-semibold uppercase tracking-wide login-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shield-check w-4 h-4">
+            <path d="M9 12.75 11.25 15 15 9.75"/><path d="M6.75 3.75 12 2.25l5.25 1.5v5.25c0 4.5-2.25 6.75-5.25 8.25-3-1.5-5.25-3.75-5.25-8.25z"/>
+          </svg>
+          Acesso seguro
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Entre para usar o painel</h1>
+        <p class="text-gray-600 text-base">Use as credenciais secretas definidas no Cloudflare Pages. O mesmo login libera o sistema inteiro.</p>
+        <div class="grid gap-3 text-sm text-gray-700">
+          <div class="flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock w-4 h-4 mt-0.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            Sessões válidas por até <strong class="font-semibold">24h</strong> (token guardado em KV com expiração automática).
+          </div>
+          <div class="flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-lock w-4 h-4 mt-0.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Aceita login somente com senha ou com usuário + senha (defina <code class="px-1 py-0.5 bg-blue-50 border border-blue-100 rounded text-xs">ADMIN_USERNAME</code> se quiser exigir usuário).
+          </div>
+          <div class="flex items-start gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-cloud w-4 h-4 mt-0.5"><path d="M17.5 19a4.5 4.5 0 0 0 .5-8.96A7 7 0 0 0 5.5 6.6"/><path d="M17.5 19H9a5 5 0 0 1-1-9.9"/></svg>
+            Todas as credenciais ficam em variáveis de segredo do Cloudflare (nunca expostas no código).        
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-100 rounded-2xl p-6 md:p-8 login-card">
+        <form id="login-form" class="space-y-5">
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-800" for="login-username">Usuário (opcional)</label>
+            <input id="login-username" name="username" type="text" autocomplete="username" placeholder="Configure ADMIN_USERNAME para exigir" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+            <p class="text-xs text-gray-500">Deixe em branco se quiser autenticar apenas com senha.</p>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-sm font-semibold text-gray-800" for="login-password">Senha</label>
+            <input id="login-password" name="password" type="password" required autocomplete="current-password" placeholder="Variável secreta ADMIN_PASSWORD" class="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" />
+          </div>
+          <div class="flex items-center justify-between gap-3 text-sm text-gray-600">
+            <label class="flex items-center gap-2">
+              <input id="login-remember" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked />
+              Manter sessão nesta máquina por 24h
+            </label>
+            <span class="text-xs text-gray-500">A senha é verificada no Cloudflare.</span>
+          </div>
+          <p id="login-error" class="text-sm text-red-600 hidden"></p>
+          <button id="login-submit" type="submit" class="w-full inline-flex justify-center items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-3 rounded-lg shadow-md transition">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-in w-5 h-5"><path d="m15 3 3 3-3 3"/><path d="M4 12v-1a7 7 0 0 1 7-7h7"/><path d="M22 12H12"/><path d="M7 12l-3 3 3 3"/><path d="M15 21h-1a7 7 0 0 1-7-7"/></svg>
+            Entrar
+          </button>
+          <p class="text-xs text-gray-500 text-center">Autenticação única libera todas as páginas do sistema.</p>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-shell" class="hidden flex flex-col md:flex-row min-h-screen">
     <!-- Sidebar (desktop) -->
     <aside class="hidden md:flex flex-col w-64 bg-gray-800 text-white">
       <div class="flex items-center justify-center h-16 border-b border-gray-700">
@@ -578,18 +646,22 @@
 
     // --- LÓGICA DE DADOS E SINCRONIZAÇÃO ---
     async function loadAllDataFromServer() {
-        if (isSyncing) return;
+        if (isSyncing || !adminAuthenticated || !adminToken) return;
         isSyncing = true;
+        const authHeaders = getAuthHeaders();
         try {
             const [estoqueRes, produtosRes, separacaoRes] = await Promise.all([
-                fetch('/api/estoque'),
-                fetch('/api/produtos'),
-                fetch('/api/separacao/listas').catch(() => null)
+                fetch('/api/estoque', { headers: authHeaders }),
+                fetch('/api/produtos', { headers: authHeaders }),
+                fetch('/api/separacao/listas', { headers: authHeaders }).catch(() => null)
             ]);
+
+            const responses = [estoqueRes, produtosRes, separacaoRes].filter(Boolean);
+            if (responses.some(r => r.status === 401)) { handleUnauthorized(); return; }
 
             if (!estoqueRes.ok) throw new Error(`HTTP error! status: ${estoqueRes.status}`);
             if (!produtosRes.ok) throw new Error(`HTTP error! status: ${produtosRes.status}`);
-            
+
             const estoqueData = await estoqueRes.json();
             const produtosData = await produtosRes.json();
             const separacaoData = separacaoRes && separacaoRes.ok ? await separacaoRes.json() : separationLists;
@@ -676,6 +748,26 @@
     }
 
     const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L'], positions: ['FUNDO','MEIO','FRENTE'] };
+
+    const loginPage = document.getElementById('login-page');
+    const appShell = document.getElementById('app-shell');
+    const loginForm = document.getElementById('login-form');
+    const loginUsername = document.getElementById('login-username');
+    const loginPassword = document.getElementById('login-password');
+    const loginRemember = document.getElementById('login-remember');
+    const loginError = document.getElementById('login-error');
+    const loginSubmit = document.getElementById('login-submit');
+
+    const toggleAuthShell = (isAuthenticated) => {
+      if (isAuthenticated) {
+        loginPage?.classList.add('hidden');
+        appShell?.classList.remove('hidden');
+      } else {
+        appShell?.classList.add('hidden');
+        loginPage?.classList.remove('hidden');
+      }
+    };
+
     const ADMIN_TOKEN_KEY = 'estoque-admin-token';
     let adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY) || localStorage.getItem(ADMIN_TOKEN_KEY) || null;
     if (adminToken && !sessionStorage.getItem(ADMIN_TOKEN_KEY)) {
@@ -698,12 +790,64 @@
         sessionStorage.removeItem(ADMIN_TOKEN_KEY);
         localStorage.removeItem(ADMIN_TOKEN_KEY);
       }
+      toggleAuthShell(adminAuthenticated);
     };
+
+    loginForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (loginError) loginError.classList.add('hidden');
+      const username = loginUsername?.value?.trim();
+      const password = loginPassword?.value?.trim();
+      if (!password) {
+        showToast('Informe a senha para continuar.', 'error');
+        loginPassword?.focus();
+        return;
+      }
+
+      if (loginSubmit) {
+        loginSubmit.disabled = true;
+        loginSubmit.textContent = 'Entrando...';
+      }
+
+      try {
+        const payload = { password };
+        if (username) payload.username = username;
+        const res = await fetch('/api/admin-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data?.token) {
+          throw new Error(data?.error || 'Falha ao autenticar.');
+        }
+
+        const remember = Boolean(loginRemember?.checked);
+        persistAdminToken(data.token, remember);
+        showToast('Sessão liberada por até 24h.', 'success');
+        await loadAllDataFromServer();
+        goTo(lastVisitedHash || '#home');
+        navigate();
+      } catch (error) {
+        console.error('Falha no login administrativo:', error);
+        if (loginError) {
+          loginError.textContent = error?.message || 'Usuário ou senha incorretos.';
+          loginError.classList.remove('hidden');
+        }
+        showToast('Não foi possível autenticar.', 'error');
+      } finally {
+        if (loginSubmit) {
+          loginSubmit.disabled = false;
+          loginSubmit.textContent = 'Entrar';
+        }
+      }
+    });
 
     const ensureAdminSession = () => {
       if (!adminToken) {
         showToast('Faça login para continuar.', 'error');
         showAdminLoginModal();
+        window.location.hash = '#login';
         return false;
       }
       return true;
@@ -3362,63 +3506,9 @@
     }
 
     const showAdminLoginModal = () => {
-      const content = `
-        <form id="admin-login-form" class="p-6 space-y-4 relative">
-            <button type="button" id="admin-login-close" class="absolute top-2 right-2 text-gray-400 hover:text-gray-600">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-            </button>
-            <h2 class="text-2xl font-bold">Acesso Restrito</h2>
-            <p class="text-sm text-gray-600">Insira a senha de administrador definida no Pages.</p>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Senha</label>
-                <input type="password" id="password" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
-            </div>
-            <label class="flex items-center gap-2 text-sm text-gray-600">
-                <input type="checkbox" id="remember-session" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                Manter sessão nesta máquina
-            </label>
-            <p class="text-xs text-gray-500">A sessão expira automaticamente após ~30 minutos de inatividade.</p>
-            <button type="submit" id="admin-login-submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">Entrar</button>
-        </form>`;
-      showModal(content);
-      const form = document.getElementById('admin-login-form');
-      const submitBtn = document.getElementById('admin-login-submit');
-      form.addEventListener('submit', async e => {
-        e.preventDefault();
-        const pw = document.getElementById('password').value.trim();
-        if (!pw) {
-          showToast('Informe a senha.', 'error');
-          return;
-        }
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Entrando...';
-        try {
-          const res = await fetch('/api/admin-login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password: pw })
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || !data?.token) {
-            throw new Error(data?.error || 'Falha ao autenticar.');
-          }
-          const remember = document.getElementById('remember-session').checked;
-          persistAdminToken(data.token, remember);
-          showToast('Sessão iniciada!', 'success');
-          closeModal();
-          renderAdmin();
-        } catch (error) {
-          console.error('Falha no login administrativo:', error);
-          showToast(error?.message || 'Senha incorreta.', 'error');
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Entrar';
-        }
-      });
-      document.getElementById('admin-login-close').addEventListener('click', () => {
-          closeModal();
-          goTo(lastVisitedHash);
-      });
+      toggleAuthShell(false);
+      window.location.hash = '#login';
+      setTimeout(() => loginPassword?.focus(), 100);
     };
 
     const showCustomConfirm = (msg, onConfirm) => {
@@ -3439,10 +3529,11 @@
     const handleUnauthorized = () => {
       const hadToken = Boolean(adminToken);
       persistAdminToken(null);
+      toggleAuthShell(false);
       if (hadToken) {
         showToast('Sessão expirada. Faça login novamente.', 'error');
       }
-      window.location.hash = '#admin';
+      window.location.hash = '#login';
       navigate();
     };
 
@@ -3466,21 +3557,29 @@
             window.location.hash = hash;
         }
     };
-    
+
     const navigate = () => {
       const hash = window.location.hash || '#home';
+      toggleAuthShell(adminAuthenticated);
+      if (!adminAuthenticated) {
+        if (hash !== '#login') {
+          window.location.hash = '#login';
+        }
+        return;
+      }
+
+      if (hash === '#login') {
+        window.location.hash = lastVisitedHash || '#home';
+        return;
+      }
+
       if (hash !== '#admin' && hash !== '#produtos' && hash !== '#etiquetas') {
           lastVisitedHash = hash;
       }
-      
+
       let pageId = `page-${hash.substring(1)}`;
       if (hash.startsWith('#separacao')) {
         pageId = 'page-separacao';
-      }
-      
-      if((hash === '#produtos' || hash === '#etiquetas') && !adminAuthenticated) {
-          goTo('#admin');
-          return;
       }
 
       pages.forEach(p => p.classList.toggle('hidden', p.id !== pageId));
@@ -3516,9 +3615,14 @@
 
     window.addEventListener('hashchange', navigate);
     window.closeModal = closeModal;
-    
+
     (async () => {
-        await loadAllDataFromServer();
+        toggleAuthShell(adminAuthenticated);
+        if (adminAuthenticated) {
+          await loadAllDataFromServer();
+        } else {
+          window.location.hash = '#login';
+        }
         navigate();
         setInterval(loadAllDataFromServer, 5000);
     })();

@@ -27,13 +27,21 @@ Pronto para deploy **grátis**.
 7. Defina o secret `ADMIN_PASSWORD` no Cloudflare Pages:
    - Settings → Environment Variables → Add production variable → "Encrypt" → nome `ADMIN_PASSWORD`.
    - Repita para Preview/Dev. Use uma senha forte: é ela que libera o painel admin.
-8. Aplique a migration `migrations/001_init.sql` no D1 (aba Migrations).
+8. Aplique as migrations no D1 (aba Migrations), na ordem: `migrations/001_init.sql`, `migrations/002_separation_routes.sql` e `migrations/003_route_step_actions.sql`.
 9. Abra a URL `https://<project>.pages.dev`. Done!
 
 ### Desenvolvimento local (opcional)
 - `npm i -g wrangler`
 - `wrangler pages dev public --d1=DB=estoque --kv=KV_BINDING=<nome-do-namespace> --binding ADMIN_PASSWORD=<senha>`
 - `wrangler d1 execute estoque --local --file=./migrations/001_init.sql`
+- `wrangler d1 execute estoque --local --file=./migrations/002_separation_routes.sql`
+- `wrangler d1 execute estoque --local --file=./migrations/003_route_step_actions.sql`
+
+Endpoints de separação/otimização (todos exigem Bearer token do admin):
+- `POST/GET /api/separacao/listas` e `GET/PUT /api/separacao/listas/:id` para criar/consultar/atualizar listas.
+- `POST /api/separacao/listas/:id/gerar-rota` gera rota de picking a partir do inventário.
+- `POST /api/separacao/rotas/:id/confirmar` executa (ou simula) os passos `PICK`/`MOVE_*`, atualizando D1 e o snapshot em KV.
+- `POST /api/otimizacao/gerar-rota` sugere rota de consolidação com `maxMoves` e `threshold`.
 
 ### Diagnóstico
 - Antes de fazer o deploy definitivo, rode `wrangler pages dev ...` e acesse `http://127.0.0.1:8788/api/estoque?op=ping`.

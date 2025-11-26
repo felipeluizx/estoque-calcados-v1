@@ -3505,7 +3505,8 @@
         };
     }
 
-    const showAdminLoginModal = () => {
+    const showAdminLoginModal = async () => {
+      await closeModal();
       toggleAuthShell(false);
       window.location.hash = '#login';
       setTimeout(() => loginPassword?.focus(), 100);

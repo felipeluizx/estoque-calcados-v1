@@ -1,11 +1,10 @@
 name = "estoque-calcados"
 compatibility_date = "2024-10-01"
 
-# Para `wrangler pages dev` com D1 local
 [[d1_databases]]
 binding = "DB"
 database_name = "estoque"
-database_id = "local-estoque"
+database_id = "bd409c97-96fb-42d1-a1f3-03da8d5bdd71"
 
 [[kv_namespaces]]
 binding = "KV_BINDING"

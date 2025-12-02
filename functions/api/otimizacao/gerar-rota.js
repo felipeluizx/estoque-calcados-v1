@@ -1,5 +1,42 @@
 import { ensureAdminAuth } from "../../lib/admin.js";
 
+const SLOT_PRIORITY = ["FRENTE", "FUNDO"];
+
+const parseLocationId = (locationId) => {
+  if (!locationId || typeof locationId !== "string") return null;
+  const match = locationId.trim().match(/^([A-Z]+)(\d+)-([A-ZÇÃ]+)$/i);
+  if (!match) return null;
+  const [, letter, section, slot] = match;
+  return {
+    letter: letter.toUpperCase(),
+    section: Number(section),
+    slot: slot.toUpperCase(),
+  };
+};
+
+const compareLocations = (a, b) => {
+  if (a === b) return 0;
+  const parsedA = parseLocationId(a);
+  const parsedB = parseLocationId(b);
+  if (!parsedA || !parsedB || !Number.isFinite(parsedA.section) || !Number.isFinite(parsedB.section)) {
+    return String(a || "").localeCompare(String(b || ""));
+  }
+
+  if (parsedA.section !== parsedB.section) return parsedA.section - parsedB.section;
+
+  const letterCompare = parsedA.letter.localeCompare(parsedB.letter);
+  if (letterCompare !== 0) return letterCompare;
+
+  const priorityA = SLOT_PRIORITY.indexOf(parsedA.slot);
+  const priorityB = SLOT_PRIORITY.indexOf(parsedB.slot);
+  if (priorityA !== priorityB && priorityA !== -1 && priorityB !== -1) return priorityA - priorityB;
+
+  if (priorityA === -1 && priorityB !== -1) return 1;
+  if (priorityB === -1 && priorityA !== -1) return -1;
+
+  return String(a || "").localeCompare(String(b || ""));
+};
+
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
     status,
@@ -48,12 +85,12 @@ export async function onRequestPost({ request, env }) {
       const sortedByQty = [...rows].sort((a, b) => {
         const qtyDiff = Number(b.quantity || 0) - Number(a.quantity || 0);
         if (qtyDiff !== 0) return qtyDiff;
-        return String(a.locationId).localeCompare(String(b.locationId));
+        return compareLocations(a.locationId, b.locationId);
       });
 
       const target = sortedByQty.reduce((best, row) => {
         if (!best) return row;
-        const compare = String(row.locationId).localeCompare(String(best.locationId));
+        const compare = compareLocations(row.locationId, best.locationId);
         return isHot ? (compare < 0 ? row : best) : compare > 0 ? row : best;
       }, null);
 
@@ -62,7 +99,7 @@ export async function onRequestPost({ request, env }) {
         .sort((a, b) => {
           const qtyDiff = Number(a.quantity || 0) - Number(b.quantity || 0);
           if (qtyDiff !== 0) return qtyDiff;
-          return String(a.locationId).localeCompare(String(b.locationId));
+          return compareLocations(a.locationId, b.locationId);
         });
 
       for (const source of donors) {

@@ -783,7 +783,10 @@
                 JSON.stringify(labelTemplatesCatalog) !== JSON.stringify(serverTemplates) ||
                 listsChanged) {
 
-                inventory = serverInventory;
+                inventory = serverInventory.map((item) => {
+                  const normalizedLocationId = normalizeLocationId(item.locationId);
+                  return normalizedLocationId ? { ...item, locationId: normalizedLocationId } : item;
+                });
                 history = serverHistory;
                 productList = serverProducts;
                 labelTemplatesCatalog = serverTemplates;
@@ -850,7 +853,69 @@
         }
     }
 
-    const mapLayout = { locations: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'], positions: ['FUNDO','MEIO','FRENTE'] };
+    const mapLayout = {
+      locations: ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'],
+      sections: ['1','2'],
+      slots: ['FRENTE','FUNDO']
+    };
+
+    const slotPriority = mapLayout.slots.map((slot) => slot.toUpperCase());
+    const parseLocationId = (locationId) => {
+      if (!locationId || typeof locationId !== 'string') return null;
+      const match = locationId.trim().match(/^([A-Z]+)(\d+)-([A-ZÇÃ]+)$/i);
+      if (!match) return null;
+      const [, letter, section, slot] = match;
+      return {
+        letter: letter.toUpperCase(),
+        section: Number(section),
+        slot: slot.toUpperCase(),
+      };
+    };
+
+    const normalizeLocationId = (locationId) => {
+      if (!locationId || typeof locationId !== 'string') return null;
+      const parsed = parseLocationId(locationId);
+      if (parsed) return `${parsed.letter}${parsed.section}-${parsed.slot}`;
+
+      const legacyMatch = locationId.trim().match(/^([A-Z]+)-([A-ZÇÃ]+)$/i);
+      if (!legacyMatch) return null;
+
+      const [, letter, slot] = legacyMatch;
+      const normalizedSlot = slot.toUpperCase();
+      const defaultSection = mapLayout.sections[0] || '1';
+      return `${letter.toUpperCase()}${defaultSection}-${normalizedSlot}`;
+    };
+
+    const locationIdsMatch = (a, b) => {
+      const normA = normalizeLocationId(a);
+      const normB = normalizeLocationId(b);
+      if (normA && normB) return normA === normB;
+      if (normA) return normA === b;
+      if (normB) return normB === a;
+      return a === b;
+    };
+
+    const compareLocations = (a, b) => {
+      if (a === b) return 0;
+      const parsedA = parseLocationId(a);
+      const parsedB = parseLocationId(b);
+      if (!parsedA || !parsedB || !Number.isFinite(parsedA.section) || !Number.isFinite(parsedB.section)) {
+        return String(a || '').localeCompare(String(b || ''));
+      }
+
+      if (parsedA.section !== parsedB.section) return parsedA.section - parsedB.section;
+
+      const letterCompare = parsedA.letter.localeCompare(parsedB.letter);
+      if (letterCompare !== 0) return letterCompare;
+
+      const priorityA = slotPriority.indexOf(parsedA.slot);
+      const priorityB = slotPriority.indexOf(parsedB.slot);
+      if (priorityA !== priorityB && priorityA !== -1 && priorityB !== -1) return priorityA - priorityB;
+      if (priorityA === -1 && priorityB !== -1) return 1;
+      if (priorityB === -1 && priorityA !== -1) return -1;
+
+      return String(a || '').localeCompare(String(b || ''));
+    };
 
     const loginPage = document.getElementById('login-page');
     const appShell = document.getElementById('app-shell');
@@ -1391,12 +1456,12 @@
     };
 
     const renderDashboard = () => {
-      document.body.classList.remove('move-mode-active'); 
+      document.body.classList.remove('move-mode-active');
       moveOperation = null;
       const container = document.getElementById('page-home');
       const totalBoxes = inventory.reduce((s, i) => s + i.quantity, 0);
-      const occupiedSlots = new Set(inventory.map(i => i.locationId)).size;
-      const totalSlots = mapLayout.locations.length * mapLayout.positions.length;
+      const occupiedSlots = new Set(inventory.map(i => normalizeLocationId(i.locationId) || i.locationId)).size;
+      const totalSlots = mapLayout.locations.length * mapLayout.sections.length * mapLayout.slots.length;
 
       const productCounts = inventory.reduce((acc, i) => {
         const p = productList.find(pp => pp.id === i.productId);
@@ -1467,7 +1532,10 @@
                 <div><label class="block text-sm font-medium text-gray-700">6. Localização</label>
                 <select id="entrada-location" required class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
                     <option value="" disabled selected>Selecione a posição</option>
-                    ${mapLayout.locations.flatMap(loc => mapLayout.positions.map(pos => `${loc}-${pos}`)).map(l => `<option value="${l}">${l}</option>`).join('')}
+                    ${mapLayout.locations
+                        .flatMap(loc => mapLayout.sections.flatMap(section => mapLayout.slots.map(slot => `${loc}${section}-${slot}`)))
+                        .map(l => `<option value="${l}">${l}</option>`)
+                        .join('')}
                 </select>
                 </div>
             </div>
@@ -1512,7 +1580,7 @@
                       const p = productList.find(pp=>pp.id===it.productId);
                       return { idx, locationId: it.locationId, label: `(${it.locationId}) ${p?.nomeCompleto || 'Produto desconhecido'} - ${it.quantity} caixas` };
                     })
-                    .sort((a,b)=>a.locationId.localeCompare(b.locationId))
+                    .sort((a,b)=>compareLocations(a.locationId, b.locationId))
                     .map(r=>`<option value="${r.idx}">${r.label}</option>`).join('')
                   }
                 </select>
@@ -2043,24 +2111,33 @@
     const renderMap = () => {
       const container = document.getElementById('page-mapa');
       const locationsHtml = mapLayout.locations.map(loc => {
-        const positionsHtml = mapLayout.positions.map(pos => {
-          const positionId = `${loc}-${pos}`;
-          const itemsInPosition = inventory.filter(i => i.locationId === positionId);
-          const qtyInPosition = itemsInPosition.reduce((sum, item) => sum + item.quantity, 0);
-          const hasItems = qtyInPosition > 0;
-          let positionClass = hasItems ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
-          
+        const sectionsHtml = mapLayout.sections.map(section => {
+          const slotsHtml = mapLayout.slots.map(slot => {
+            const slotId = `${loc}${section}-${slot}`;
+            const itemsInSlot = inventory.filter(i => locationIdsMatch(i.locationId, slotId));
+            const qtyInSlot = itemsInSlot.reduce((sum, item) => sum + item.quantity, 0);
+            const hasItems = qtyInSlot > 0;
+            let slotClass = hasItems ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
+
+            return `
+              <div id="map-cell-${slotId}" data-location-id="${slotId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${slotClass}">
+                ${section} - ${slot} ${qtyInSlot > 0 ? `(${qtyInSlot})` : ''}
+              </div>
+            `;
+          }).join('');
+
           return `
-            <div id="map-cell-${positionId}" data-location-id="${positionId}" class="map-card-position cursor-pointer p-3 rounded-md font-semibold ${positionClass}">
-              ${pos} ${qtyInPosition > 0 ? `(${qtyInPosition})` : ''}
+            <div class="bg-gray-50 rounded-md p-2 flex flex-col gap-2">
+              <div class="text-sm font-semibold text-gray-600">${loc}${section}</div>
+              ${slotsHtml}
             </div>
           `;
         }).join('');
-    
+
         return `
           <div class="bg-white rounded-lg shadow-md p-2 flex flex-col gap-2 text-center select-none">
             <div class="font-bold text-gray-700 border-b pb-1 text-lg">${loc}</div>
-            ${positionsHtml}
+            ${sectionsHtml}
           </div>
         `;
       }).join('');
@@ -2078,11 +2155,11 @@
       document.querySelectorAll('.map-card-position').forEach(cell => {
           cell.addEventListener('click', () => {
               const locationId = cell.dataset.locationId;
-              
+
               if(moveOperation) {
                   handleMoveSelection(locationId);
               } else {
-                  const items = inventory.filter(i => i.locationId === locationId);
+                  const items = inventory.filter(i => locationIdsMatch(i.locationId, locationId));
                   showMapCellModal(locationId, items);
               }
           });
@@ -2096,7 +2173,7 @@
               const parentCard = cell.parentElement;
               const hasMatchInCard = Array.from(parentCard.querySelectorAll('.map-card-position')).some(pos => {
                   const locationId = pos.dataset.locationId;
-                  const itemsInPos = inventory.filter(i => i.locationId === locationId);
+                  const itemsInPos = inventory.filter(i => locationIdsMatch(i.locationId, locationId));
                   return itemsInPos.some(item => {
                     const product = productList.find(p => p.id === item.productId);
                     return product && product.nomeCompleto.toLowerCase().includes(searchTerm);
@@ -2107,7 +2184,7 @@
                   parentCard.classList.add('opacity-25');
               } else if (searchTerm && hasMatchInCard) {
                   const locationId = cell.dataset.locationId;
-                  const items = inventory.filter(i => i.locationId === locationId);
+                  const items = inventory.filter(i => locationIdsMatch(i.locationId, locationId));
                   const cellHasMatch = items.some(item => {
                       const product = productList.find(p => p.id === item.productId);
                       return product && product.nomeCompleto.toLowerCase().includes(searchTerm);
@@ -2394,7 +2471,9 @@
         moveOperation = null;
 
         const container = document.getElementById('page-etiquetas');
-        const locations = mapLayout.locations.flatMap(loc => mapLayout.positions.map(pos => `${loc}-${pos}`));
+        const locations = mapLayout.locations.flatMap(loc =>
+            mapLayout.sections.flatMap(section => mapLayout.slots.map(slot => `${loc}${section}-${slot}`))
+        );
 
         container.innerHTML = `
             <div class="space-y-6">
@@ -2711,7 +2790,7 @@
             <ul class="divide-y divide-gray-200 -mx-6 px-6 mb-4 max-h-60 overflow-y-auto">
                 ${items.map((item) => {
                     const product = productList.find(p => p.id === item.productId);
-                    const inventoryIndex = inventory.findIndex(invItem => invItem.locationId === locationId && invItem.productId === item.productId);
+                    const inventoryIndex = inventory.findIndex(invItem => locationIdsMatch(invItem.locationId, locationId) && invItem.productId === item.productId);
                     return `<li class="py-3">
                         <div class="flex justify-between items-center">
                             <div>
@@ -2784,7 +2863,7 @@
         if (!moveOperation) return;
         const { itemToMove } = moveOperation;
 
-        if (destinationLocationId === itemToMove.locationId) {
+        if (locationIdsMatch(destinationLocationId, itemToMove.locationId)) {
             showToast('Origem e destino não podem ser os mesmos.', 'error');
             return;
         }
@@ -2828,7 +2907,7 @@
             showToast('Quantidade inválida.', 'error'); return;
         }
 
-        const sourceItemIndex = inventory.findIndex(i => i.locationId === itemToMove.locationId && i.productId === itemToMove.productId);
+        const sourceItemIndex = inventory.findIndex(i => locationIdsMatch(i.locationId, itemToMove.locationId) && i.productId === itemToMove.productId);
         if(sourceItemIndex === -1) {
             showToast('Erro: item de origem não encontrado.', 'error'); return;
         }
@@ -2839,7 +2918,7 @@
             inventory[sourceItemIndex].quantity -= quantityToMove;
         }
 
-        const destItemIndex = inventory.findIndex(i => i.locationId === destinationLocationId && i.productId === itemToMove.productId);
+        const destItemIndex = inventory.findIndex(i => locationIdsMatch(i.locationId, destinationLocationId) && i.productId === itemToMove.productId);
         if (destItemIndex > -1) {
             inventory[destItemIndex].quantity += quantityToMove;
         } else {
@@ -2859,16 +2938,18 @@
 
     async function registerEntry(product, quantity, locationId) {
         if (!product || !quantity || !locationId) return;
-        
-        const existingItemIndex = inventory.findIndex(item => item.locationId === locationId && item.productId === product.id);
+
+        const normalizedLocationId = normalizeLocationId(locationId) || locationId;
+
+        const existingItemIndex = inventory.findIndex(item => locationIdsMatch(item.locationId, normalizedLocationId) && item.productId === product.id);
 
         if (existingItemIndex > -1) {
             inventory[existingItemIndex].quantity += quantity;
         } else {
-            inventory.push({ locationId: locationId, productId: product.id, quantity: quantity });
+            inventory.push({ locationId: normalizedLocationId, productId: product.id, quantity: quantity });
         }
 
-        addHistory('ENTRADA', `+${quantity} caixas de ${product.nomeCompleto} em ${locationId}`);
+        addHistory('ENTRADA', `+${quantity} caixas de ${product.nomeCompleto} em ${normalizedLocationId}`);
         const saved = await persistInventory();
         if (!saved) return;
         showToast('Entrada registrada com sucesso!');
@@ -2936,7 +3017,7 @@
                 } else if (!state.product) {
                     showGenericScanner('Leia o código do PRODUTO', processScan);
                 } else { // Implies !state.location
-                    showGenericScanner('Leia o código da POSIÇÃO (A, B...)', processScan);
+                    showGenericScanner('Leia o código da POSIÇÃO + SEÇÃO (ex.: A1)', processScan);
                 }
             });
         };
@@ -2953,19 +3034,26 @@
     }
     
     function showEntryFinalModal(product, baseLocation) {
+        const [baseSection, slotFromLocation] = baseLocation.split('-');
+        const baseLocationCode = baseSection || baseLocation;
+        const preferredSlot = mapLayout.slots.includes(slotFromLocation) ? slotFromLocation : mapLayout.slots[0];
+
         const content = `
             <form id="scan-final-form" class="p-6 space-y-4">
                 <h3 class="text-xl font-bold mb-2">Confirmar Entrada</h3>
                 <div class="bg-gray-100 p-3 rounded-md">
                     <p class="font-semibold">${product.nomeCompleto}</p>
-                    <p class="text-sm text-gray-600">Em Posição: ${baseLocation}</p>
+                    <p class="text-sm text-gray-600">Em Posição/Seção: ${baseLocationCode}</p>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Posição Detalhada</label>
-                    <div id="scan-final-position-buttons" class="mt-2 grid grid-cols-3 gap-2">
-                        ${mapLayout.positions.map((p, index) => `
-                            <button type="button" data-position="${p}" class="position-selector-btn p-3 rounded-md border-2 font-semibold transition-colors ${index === 0 ? 'border-blue-500 bg-blue-100 text-blue-800' : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'}">${p}</button>
-                        `).join('')}
+                    <label class="block text-sm font-medium text-gray-700">Slot (FRENTE ou FUNDO)</label>
+                    <div id="scan-final-position-buttons" class="mt-2 grid grid-cols-2 gap-2">
+                        ${mapLayout.slots.map((p) => {
+                            const isSelected = p === preferredSlot;
+                            return `
+                                <button type="button" data-position="${p}" class="position-selector-btn p-3 rounded-md border-2 font-semibold transition-colors ${isSelected ? 'border-blue-500 bg-blue-100 text-blue-800' : 'border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100'}">${p}</button>
+                            `;
+                        }).join('')}
                     </div>
                     <input type="hidden" id="scan-final-position" required>
                 </div>
@@ -2980,42 +3068,48 @@
             </form>
         `;
         showModal(content);
-        
+
         const positionButtons = document.querySelectorAll('.position-selector-btn');
         const hiddenPositionInput = document.getElementById('scan-final-position');
+        const activeClasses = ['border-blue-500', 'bg-blue-100', 'text-blue-800'];
+        const inactiveClasses = ['border-gray-200', 'bg-gray-50', 'text-gray-600', 'hover:bg-gray-100'];
 
-        hiddenPositionInput.value = positionButtons[0].dataset.position;
+        const setActiveButton = (targetBtn) => {
+            hiddenPositionInput.value = targetBtn.dataset.position;
+            positionButtons.forEach(btn => {
+                btn.classList.remove(...activeClasses, ...inactiveClasses);
+                const classListToAdd = btn === targetBtn ? activeClasses : inactiveClasses;
+                btn.classList.add(...classListToAdd);
+            });
+        };
+
+        const defaultButton = Array.from(positionButtons).find(btn => btn.dataset.position === preferredSlot) || positionButtons[0];
+        setActiveButton(defaultButton);
 
         positionButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                hiddenPositionInput.value = button.dataset.position;
-                positionButtons.forEach(btn => {
-                    btn.classList.remove('border-blue-500', 'bg-blue-100', 'text-blue-800');
-                    btn.classList.add('border-gray-200', 'bg-gray-50', 'text-gray-600', 'hover:bg-gray-100');
-                });
-                button.classList.add('border-blue-500', 'bg-blue-100', 'text-blue-800');
-                button.classList.remove('border-gray-200', 'bg-gray-50', 'text-gray-600', 'hover:bg-gray-100');
-            });
+            button.addEventListener('click', () => setActiveButton(button));
         });
 
         document.getElementById('scan-final-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const position = document.getElementById('scan-final-position').value;
             const quantity = parseInt(document.getElementById('scan-final-quantity').value);
-            const finalLocationId = `${baseLocation}-${position}`;
-            
+            const finalLocationId = `${baseLocationCode}-${position}`;
+
             await registerEntry(product, quantity, finalLocationId);
             closeModal();
         });
     }
 
     function showExitFinalModal(product, baseLocation) {
+        const [baseSection] = baseLocation.split('-');
+        const baseLocationCode = baseSection || baseLocation;
         const itemsInBaseLocation = inventory
             .map((item, index) => ({...item, index}))
-            .filter(item => item.locationId.startsWith(`${baseLocation}-`) && item.productId === product.id);
-        
+            .filter(item => item.locationId.startsWith(`${baseLocationCode}-`) && mapLayout.slots.includes(item.locationId.split('-')[1]) && item.productId === product.id);
+
         if(itemsInBaseLocation.length === 0) {
-            showToast(`Produto ${product.nomeCompleto} não encontrado na posição ${baseLocation}.`, 'error');
+            showToast(`Produto ${product.nomeCompleto} não encontrado na posição ${baseLocationCode}.`, 'error');
             closeModal();
             return;
         }
@@ -3025,7 +3119,7 @@
                 <h3 class="text-xl font-bold mb-2">Confirmar Saída</h3>
                 <div class="bg-gray-100 p-3 rounded-md">
                     <p class="font-semibold">${product.nomeCompleto}</p>
-                    <p class="text-sm text-gray-600">Da Posição: ${baseLocation}</p>
+                    <p class="text-sm text-gray-600">Da Posição/Seção: ${baseLocationCode}</p>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Lote Específico</label>

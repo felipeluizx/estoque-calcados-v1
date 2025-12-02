@@ -426,6 +426,8 @@
       product: null
     };
 
+    const locationLabelCache = new Map();
+
     const deepClone = (value) => JSON.parse(JSON.stringify(value));
     const encodeInputValue = (value = '') => String(value ?? '').replace(/"/g, '&quot;');
 
@@ -643,6 +645,106 @@
       labelPreviewState.canvases.forEach((canvas, index) => {
         downloadCanvasAsPng(canvas, `${productSlug}-etiqueta-${String(index + 1).padStart(2, '0')}.png`);
       });
+    };
+
+    const createLocationLabelCanvas = async (locationCode) => {
+      const WIDTH_MM = 100;
+      const HEIGHT_MM = 150;
+      const DPI = 300;
+      const widthPx = Math.round((WIDTH_MM / 25.4) * DPI);
+      const heightPx = Math.round((HEIGHT_MM / 25.4) * DPI);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = widthPx;
+      canvas.height = heightPx;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, widthPx, heightPx);
+
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = Math.max(6, Math.floor(widthPx * 0.006));
+      ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, widthPx - ctx.lineWidth, heightPx - ctx.lineWidth);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.font = `800 ${Math.floor(heightPx * 0.08)}px "Inter", sans-serif`;
+      ctx.fillText('POSIÇÃO', widthPx / 2, Math.floor(heightPx * 0.06));
+
+      ctx.font = `900 ${Math.floor(heightPx * 0.24)}px "Inter", sans-serif`;
+      ctx.fillText(locationCode, widthPx / 2, Math.floor(heightPx * 0.14));
+
+      const qrPayload = JSON.stringify({ type: 'location', location: locationCode });
+      const qrSize = Math.floor(widthPx * 0.65);
+      const qrCanvas = await createQRCodeCanvas(qrPayload, qrSize, 'H');
+      const qrX = (widthPx - qrSize) / 2;
+      const qrY = Math.floor(heightPx * 0.4);
+      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
+
+      ctx.textBaseline = 'middle';
+      ctx.font = `600 ${Math.floor(heightPx * 0.05)}px "Inter", sans-serif`;
+      ctx.fillStyle = '#334155';
+      ctx.fillText('Escaneie para informar localização', widthPx / 2, heightPx - Math.floor(heightPx * 0.08));
+
+      return canvas;
+    };
+
+    const getLocationLabelCanvas = async (locationCode) => {
+      if (locationLabelCache.has(locationCode)) return locationLabelCache.get(locationCode);
+      const canvas = await createLocationLabelCanvas(locationCode);
+      locationLabelCache.set(locationCode, canvas);
+      return canvas;
+    };
+
+    const downloadLocationLabelsPDF = async (locations) => {
+      if (!window.jspdf?.jsPDF) {
+        showToast('Biblioteca jsPDF não carregada.', 'error');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [100, 150] });
+
+      for (let i = 0; i < locations.length; i += 1) {
+        const location = locations[i];
+        const canvas = await getLocationLabelCanvas(location);
+        if (i !== 0) doc.addPage();
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 100, 150);
+      }
+
+      doc.save('etiquetas-posicao.pdf');
+    };
+
+    const downloadLocationLabelPNGs = async (locations) => {
+      for (const location of locations) {
+        const canvas = await getLocationLabelCanvas(location);
+        downloadCanvasAsPng(canvas, `posicao-${location}.png`);
+        await new Promise((resolve) => setTimeout(resolve, 80));
+      }
+    };
+
+    const printLocationLabels = async (locations) => {
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        showToast('Bloqueio de pop-up impediu a impressão.', 'error');
+        return;
+      }
+
+      printWindow.document.write('<html><head><title>Etiquetas de Posição</title><style>body{margin:0;padding:16px;font-family:Inter, sans-serif;display:flex;flex-wrap:wrap;gap:16px;justify-content:center;background:#f8fafc;} img{width:320px;border:1px solid #e5e7eb;box-shadow:0 6px 18px rgba(15,23,42,0.12);} @media print { img { break-inside: avoid; page-break-inside: avoid; } }</style></head><body></body></html>');
+      const container = printWindow.document.body;
+
+      for (const location of locations) {
+        const canvas = await getLocationLabelCanvas(location);
+        const img = printWindow.document.createElement('img');
+        img.src = canvas.toDataURL('image/png');
+        img.alt = `Posição ${location}`;
+        container.appendChild(img);
+      }
+
+      printWindow.document.close();
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 400);
     };
 
     // --- LÓGICA DE DADOS E SINCRONIZAÇÃO ---
@@ -2290,354 +2392,103 @@
     const renderEtiquetas = () => {
         document.body.classList.remove('move-mode-active');
         moveOperation = null;
+
         const container = document.getElementById('page-etiquetas');
-
-        if (!productList.length) {
-            container.innerHTML = `
-                <div class="bg-white rounded-lg shadow-md p-8 text-center">
-                    <h1 class="text-3xl font-bold mb-4">Etiquetas de Produto</h1>
-                    <p class="text-gray-600">Cadastre pelo menos um produto para habilitar o gerador de etiquetas.</p>
-                </div>
-            `;
-            return;
-        }
-
-        if (!labelTemplatesCatalog.length) {
-            labelTemplatesCatalog = deepClone(defaultLabelTemplates);
-        }
-
-        if (!labelDesignerState.productId || !productList.some(p => String(p.id) === String(labelDesignerState.productId))) {
-            labelDesignerState.productId = productList[0]?.id ?? null;
-        }
-
-        if (!labelDesignerState.templateId || !labelTemplatesCatalog.some(t => t.id === labelDesignerState.templateId)) {
-            labelDesignerState.templateId = labelTemplatesCatalog[0]?.id ?? null;
-        }
-
-        if (!labelDesignerState.sequence.length) {
-            labelDesignerState.sequence = buildSequenceFromPreset(labelDesignerState.gradeType, labelDesignerState.pairsPerSize);
-        }
-
-        const productOptions = productList
-            .slice()
-            .sort((a, b) => a.nomeCompleto.localeCompare(b.nomeCompleto))
-            .map(p => `<option value="${p.id}" ${String(p.id) === String(labelDesignerState.productId) ? 'selected' : ''}>${p.nomeCompleto}</option>`)
-            .join('');
-
-        const templateOptions = labelTemplatesCatalog
-            .map(t => `<option value="${t.id}" ${t.id === labelDesignerState.templateId ? 'selected' : ''}>${t.name}</option>`)
-            .join('');
-
-        const gradeOptions = [
-            ...Object.entries(labelGradePresets).map(([key, preset]) => `<option value="${key}" ${labelDesignerState.gradeType === key ? 'selected' : ''}>${preset.label}</option>`),
-            `<option value="custom" ${labelDesignerState.gradeType === 'custom' ? 'selected' : ''}>Customizada</option>`
-        ].join('');
+        const locations = mapLayout.locations.flatMap(loc => mapLayout.positions.map(pos => `${loc}-${pos}`));
 
         container.innerHTML = `
             <div class="space-y-6">
-                <div class="flex flex-col lg:flex-row gap-6">
-                    <div class="bg-white p-6 rounded-lg shadow-md lg:w-5/12 space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-md space-y-5">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
-                            <h1 class="text-3xl font-bold mb-2">Etiquetas de Produto</h1>
-                            <p class="text-gray-600 text-sm">Selecione o produto, template e a grade para gerar até 12 etiquetas por página. As etiquetas extras representam as páginas 13/14.</p>
+                            <h1 class="text-3xl font-bold mb-2">Etiquetas de Posição</h1>
+                            <p class="text-gray-600 text-sm">Gere etiquetas no formato 100 x 150 mm com QR Code grande e legível para todas as posições cadastradas.</p>
+                            <p class="text-xs text-gray-500 mt-1">Formato pronto para impressão térmica ou laser. Cada QR Code codifica {"type":"location","location":"X"}.</p>
                         </div>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Produto</label>
-                                <select id="label-product-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">${productOptions}</select>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Template</label>
-                                <select id="label-template-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">${templateOptions}</select>
-                                <p class="text-xs text-gray-500 mt-1">Novos templates podem ser cadastrados via /api/produtos (veja o README).</p>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Tipo de grade</label>
-                                    <select id="label-grade-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">${gradeOptions}</select>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Pares por tamanho</label>
-                                    <input type="number" id="label-pairs-input" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" min="1" value="${labelDesignerState.pairsPerSize}">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Extras (pág. 13/14)</label>
-                                    <input type="number" id="label-extra-input" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" min="0" max="2" value="${labelDesignerState.extraLabels}">
-                                    <p class="text-[11px] text-gray-500 mt-1">Use 0 para apenas 12 etiquetas. 1 ou 2 adicionam as páginas 13/14.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <h2 class="text-lg font-semibold">Sequência de tamanhos</h2>
-                                <button id="label-reset-sequence" class="text-sm text-blue-600 hover:text-blue-800">Recarregar grade</button>
-                            </div>
-                            <p class="text-xs text-gray-500">Edite a sequência para tiragens unitárias ou grades personalizadas.</p>
-                            <div class="overflow-x-auto border border-gray-200 rounded-md mt-3">
-                                <table class="min-w-full divide-y divide-gray-200 text-sm">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Tamanho</th>
-                                            <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Qtd. etiquetas</th>
-                                            <th class="px-3 py-2"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="label-sequence-body" class="divide-y divide-gray-100"></tbody>
-                                </table>
-                            </div>
-                            <div class="flex flex-wrap gap-3 mt-3">
-                                <button id="label-add-row" class="px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-sm font-semibold">Adicionar linha</button>
-                                <span id="label-sequence-summary" class="text-xs text-gray-500 self-center"></span>
-                            </div>
-                        </div>
-                        <div class="flex flex-wrap gap-3 pt-4 border-t border-gray-100">
-                            <button id="label-preview-btn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold">Gerar prévia</button>
-                            <button id="download-label-pdf" class="bg-gray-200 text-gray-600 px-4 py-2 rounded-md font-semibold disabled:opacity-60" disabled>Gerar PDF</button>
-                            <button id="download-label-pngs" class="bg-gray-200 text-gray-600 px-4 py-2 rounded-md font-semibold disabled:opacity-60" disabled>Baixar PNGs</button>
+                        <div class="flex flex-wrap gap-3">
+                            <button id="location-print-all" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-semibold flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 22H7a2 2 0 0 1-2-2v-5h14v5a2 2 0 0 1-2 2Z"/><path d="M7 2h10v4H7z"/><path d="M17 2.1A7 7 0 0 1 21 9v3H3V9a7 7 0 0 1 4-6.3"/></svg>
+                                Imprimir tudo
+                            </button>
+                            <button id="location-pdf-all" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10"/><path d="M12 17v4"/><path d="M17 5v-2a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2"/><path d="M17 5H7"/><rect width="14" height="14" x="5" y="5" rx="2"/></svg>
+                                Baixar PDF (100x150)
+                            </button>
+                            <button id="location-png-all" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 font-semibold border border-gray-200 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+                                Baixar PNGs
+                            </button>
                         </div>
                     </div>
-                    <div class="flex-1">
-                        <div class="bg-white p-6 rounded-lg shadow-md h-full flex flex-col">
-                            <div class="flex items-center justify-between mb-4">
-                                <h2 class="text-xl font-semibold">Prévia das etiquetas</h2>
-                                <span id="label-preview-meta" class="text-sm text-gray-500"></span>
-                            </div>
-                            <div id="label-preview-pages" class="space-y-6 overflow-y-auto" style="max-height:70vh;">
-                                <p class="text-gray-500 text-sm">Configure os campos ao lado e clique em "Gerar prévia".</p>
-                            </div>
-                        </div>
+                    <div class="flex flex-wrap gap-4 text-sm text-gray-600">
+                        <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200"><span class="font-semibold text-gray-900 text-lg">${locations.length}</span> posições disponíveis</div>
+                        <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">QR Code dedicado por posição</div>
+                        <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">Layout otimizado para leitura rápida</div>
+                    </div>
+                    <div id="location-label-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div class="text-sm text-gray-500">Gerando prévias das etiquetas...</div>
                     </div>
                 </div>
             </div>
         `;
 
-        const productSelect = document.getElementById('label-product-select');
-        const templateSelect = document.getElementById('label-template-select');
-        const gradeSelect = document.getElementById('label-grade-select');
-        const pairsInput = document.getElementById('label-pairs-input');
-        const extraInput = document.getElementById('label-extra-input');
-        const sequenceBody = document.getElementById('label-sequence-body');
-        const sequenceSummary = document.getElementById('label-sequence-summary');
-        const previewBtn = document.getElementById('label-preview-btn');
-        const pdfBtn = document.getElementById('download-label-pdf');
-        const pngBtn = document.getElementById('download-label-pngs');
-        const previewPages = document.getElementById('label-preview-pages');
-        const previewMeta = document.getElementById('label-preview-meta');
+        const grid = document.getElementById('location-label-grid');
+        const pdfBtn = document.getElementById('location-pdf-all');
+        const pngBtn = document.getElementById('location-png-all');
+        const printBtn = document.getElementById('location-print-all');
 
-        const resetPreview = (message = 'Configure os campos ao lado e clique em "Gerar prévia".') => {
-            labelPreviewState.canvases = [];
-            labelPreviewState.product = null;
-            labelPreviewState.template = null;
-            previewPages.innerHTML = `<p class="text-gray-500 text-sm">${message}</p>`;
-            previewMeta.textContent = '';
-            pdfBtn.disabled = true;
-            pngBtn.disabled = true;
+        const renderPreviews = async () => {
+            grid.innerHTML = '';
+            for (const location of locations) {
+                const canvas = await getLocationLabelCanvas(location);
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col gap-3';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs uppercase text-gray-500">Posição</p>
+                            <p class="text-2xl font-black text-gray-900">${location}</p>
+                        </div>
+                        <span class="text-[11px] text-gray-500">100 x 150 mm</span>
+                    </div>
+                    <div class="bg-gray-50 border border-dashed border-gray-200 rounded-md overflow-hidden">
+                        <img src="${canvas.toDataURL('image/png')}" alt="Etiqueta ${location}" class="w-full h-auto block">
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button data-location="${location}" class="location-download-single px-3 py-2 rounded-md bg-gray-100 hover:bg-gray-200 text-sm font-semibold">Baixar PNG</button>
+                        <button data-location="${location}" class="location-print-single px-3 py-2 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 text-sm font-semibold">Imprimir etiqueta</button>
+                    </div>
+                `;
+
+                const downloadBtn = card.querySelector('.location-download-single');
+                downloadBtn.addEventListener('click', async () => {
+                    const singleCanvas = await getLocationLabelCanvas(location);
+                    downloadCanvasAsPng(singleCanvas, `posicao-${location}.png`);
+                });
+
+                const singlePrintBtn = card.querySelector('.location-print-single');
+                singlePrintBtn.addEventListener('click', async () => {
+                    await printLocationLabels([location]);
+                });
+
+                grid.appendChild(card);
+            }
         };
 
-        const buildLabelEntries = () => {
-            const entries = [];
-            labelDesignerState.sequence.forEach((row, rowIndex) => {
-                const size = (row.size || '').trim();
-                const quantity = Math.max(0, parseInt(row.quantity, 10) || 0);
-                if (!size || quantity <= 0) return;
-                for (let i = 0; i < quantity; i += 1) {
-                    entries.push({ size, rowIndex, quantityForSize: quantity, pairIndex: i + 1, isExtra: false });
-                }
-            });
-            const extraLabels = Math.min(2, Math.max(0, parseInt(labelDesignerState.extraLabels, 10) || 0));
-            for (let i = 0; i < extraLabels; i += 1) {
-                entries.push({ size: `Extra ${13 + i}`, rowIndex: 'extra', quantityForSize: 1, pairIndex: 1, isExtra: true });
-            }
-            return entries;
-        };
+        renderPreviews();
 
-        const updateSummary = () => {
-            const entries = buildLabelEntries();
-            const total = entries.length;
-            const pages = total ? Math.ceil(total / LABELS_PER_PAGE) : 0;
-            const extrasInfo = labelDesignerState.extraLabels ? ` | Extras: páginas ${Array.from({ length: labelDesignerState.extraLabels }, (_, idx) => 13 + idx).join(' e ')}` : '';
-            const pageInfo = pages ? ` (${pages} página${pages > 1 ? 's' : ''})` : '';
-            sequenceSummary.textContent = `${total} etiquetas previstas${pageInfo}${extrasInfo}`;
-        };
-
-        const renderSequenceRows = () => {
-            sequenceBody.innerHTML = labelDesignerState.sequence.map((row, index) => `
-                <tr>
-                    <td class="px-3 py-2"><input type="text" class="w-full border border-gray-200 rounded-md px-2 py-1 text-sm label-size-input" data-index="${index}" value="${encodeInputValue(row.size)}" /></td>
-                    <td class="px-3 py-2"><input type="number" class="w-full border border-gray-200 rounded-md px-2 py-1 text-sm label-qty-input" data-index="${index}" min="0" value="${row.quantity}" /></td>
-                    <td class="px-3 py-2 text-right"><button type="button" class="text-red-500 hover:text-red-700 text-sm label-remove-row" data-index="${index}">Remover</button></td>
-                </tr>
-            `).join('');
-            updateSummary();
-            resetPreview('Configure os campos ao lado e clique em "Gerar prévia".');
-        };
-
-        renderSequenceRows();
-
-        productSelect.addEventListener('change', (e) => {
-            labelDesignerState.productId = e.target.value;
-            resetPreview();
+        pdfBtn.addEventListener('click', async () => {
+            await downloadLocationLabelsPDF(locations);
         });
 
-        templateSelect.addEventListener('change', (e) => {
-            labelDesignerState.templateId = e.target.value;
-            resetPreview();
+        pngBtn.addEventListener('click', async () => {
+            await downloadLocationLabelPNGs(locations);
         });
 
-        gradeSelect.addEventListener('change', (e) => {
-            labelDesignerState.gradeType = e.target.value;
-            if (labelDesignerState.gradeType !== 'custom') {
-                labelDesignerState.sequence = buildSequenceFromPreset(labelDesignerState.gradeType, labelDesignerState.pairsPerSize);
-                renderSequenceRows();
-            }
-            resetPreview();
-        });
-
-        pairsInput.addEventListener('change', (e) => {
-            const qty = Math.max(1, parseInt(e.target.value, 10) || 1);
-            labelDesignerState.pairsPerSize = qty;
-            labelDesignerState.sequence = labelDesignerState.sequence.map(row => ({ ...row, quantity: qty }));
-            e.target.value = qty;
-            renderSequenceRows();
-        });
-
-        extraInput.addEventListener('change', (e) => {
-            labelDesignerState.extraLabels = Math.min(2, Math.max(0, parseInt(e.target.value, 10) || 0));
-            e.target.value = labelDesignerState.extraLabels;
-            updateSummary();
-            resetPreview();
-        });
-
-        document.getElementById('label-add-row').addEventListener('click', (e) => {
-            e.preventDefault();
-            labelDesignerState.sequence.push({ size: '', quantity: labelDesignerState.pairsPerSize });
-            renderSequenceRows();
-        });
-
-        document.getElementById('label-reset-sequence').addEventListener('click', (e) => {
-            e.preventDefault();
-            labelDesignerState.sequence = buildSequenceFromPreset(labelDesignerState.gradeType === 'custom' ? 'baixa' : labelDesignerState.gradeType, labelDesignerState.pairsPerSize);
-            labelDesignerState.gradeType = labelDesignerState.gradeType === 'custom' ? 'baixa' : labelDesignerState.gradeType;
-            gradeSelect.value = labelDesignerState.gradeType;
-            renderSequenceRows();
-        });
-
-        sequenceBody.addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.index, 10);
-            if (Number.isNaN(index)) return;
-            if (e.target.classList.contains('label-size-input')) {
-                labelDesignerState.sequence[index].size = e.target.value;
-            }
-            if (e.target.classList.contains('label-qty-input')) {
-                labelDesignerState.sequence[index].quantity = Math.max(0, parseInt(e.target.value, 10) || 0);
-            }
-            updateSummary();
-            resetPreview();
-        });
-
-        sequenceBody.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('label-remove-row')) return;
-            const index = parseInt(e.target.dataset.index, 10);
-            if (Number.isNaN(index)) return;
-            labelDesignerState.sequence.splice(index, 1);
-            renderSequenceRows();
-        });
-
-        previewBtn.addEventListener('click', async () => {
-            const product = productList.find(p => String(p.id) === String(labelDesignerState.productId));
-            const template = labelTemplatesCatalog.find(t => t.id === labelDesignerState.templateId);
-            if (!product) {
-                showToast('Selecione um produto válido.', 'error');
-                return;
-            }
-            if (!template) {
-                showToast('Template não encontrado. Verifique o cadastro.', 'error');
-                return;
-            }
-            const entries = buildLabelEntries();
-            if (!entries.length) {
-                showToast('Adicione ao menos uma linha com quantidade maior que zero.', 'error');
-                return;
-            }
-            previewBtn.disabled = true;
-            const previousText = previewBtn.textContent;
-            previewBtn.textContent = 'Gerando...';
-            previewPages.innerHTML = '<p class="text-gray-500 text-sm">Gerando etiquetas...</p>';
-            previewMeta.textContent = '';
-            try {
-                const templateImage = await loadTemplateImage(template.artPath);
-                const canvases = [];
-                previewPages.innerHTML = '';
-                let canvasIndex = 0;
-                for (let pageIndex = 0; pageIndex < Math.ceil(entries.length / LABELS_PER_PAGE); pageIndex += 1) {
-                    const pageLabels = entries.slice(pageIndex * LABELS_PER_PAGE, (pageIndex + 1) * LABELS_PER_PAGE);
-                    const pageSection = document.createElement('section');
-                    pageSection.className = 'border border-dashed border-gray-300 rounded-lg p-4';
-                    pageSection.innerHTML = `<div class="flex items-center justify-between mb-3"><h3 class="font-semibold">Página ${pageIndex + 1}</h3><span class="text-sm text-gray-500">${pageLabels.length} etiqueta${pageLabels.length !== 1 ? 's' : ''}</span></div>`;
-                    const grid = document.createElement('div');
-                    grid.className = 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4';
-                    pageSection.appendChild(grid);
-                    previewPages.appendChild(pageSection);
-
-                    for (const entry of pageLabels) {
-                        const canvas = await drawLabelFromTemplate(template, product, entry, labelDesignerState.gradeType, templateImage);
-                        canvases.push(canvas);
-                        const wrapper = document.createElement('div');
-                        wrapper.className = 'bg-gray-50 rounded-lg p-3 flex flex-col gap-2 shadow-sm';
-                        canvas.classList.add('w-full');
-                        canvas.style.maxWidth = '100%';
-                        wrapper.appendChild(canvas);
-                        const caption = document.createElement('div');
-                        caption.className = 'text-xs text-gray-600 flex flex-col';
-                        caption.innerHTML = `<span>Tamanho: <strong>${entry.size}</strong></span><span>Etiqueta ${entry.pairIndex}/${entry.quantityForSize}${entry.isExtra ? ' (extra)' : ''}</span>`;
-                        wrapper.appendChild(caption);
-                        const singleButton = document.createElement('button');
-                        singleButton.type = 'button';
-                        singleButton.className = 'download-single-label text-xs text-blue-600 hover:text-blue-800 font-semibold self-start';
-                        singleButton.dataset.index = canvasIndex.toString();
-                        singleButton.textContent = 'Baixar esta etiqueta';
-                        wrapper.appendChild(singleButton);
-                        grid.appendChild(wrapper);
-                        canvasIndex += 1;
-                    }
-                }
-                labelPreviewState.canvases = canvases;
-                labelPreviewState.template = template;
-                labelPreviewState.product = product;
-                previewMeta.textContent = `${canvases.length} etiqueta${canvases.length !== 1 ? 's' : ''} em ${Math.ceil(canvases.length / LABELS_PER_PAGE)} página${Math.ceil(canvases.length / LABELS_PER_PAGE) !== 1 ? 's' : ''}`;
-                pdfBtn.disabled = !canvases.length;
-                pngBtn.disabled = !canvases.length;
-                if (!canvases.length) {
-                    previewPages.innerHTML = '<p class="text-gray-500 text-sm">Nenhuma etiqueta foi gerada para a configuração atual.</p>';
-                }
-            } catch (err) {
-                console.error('Falha ao gerar etiquetas', err);
-                showToast('Não foi possível gerar as etiquetas. Verifique o template.', 'error');
-                resetPreview('Ocorreu um erro. Ajuste os dados e tente novamente.');
-            } finally {
-                previewBtn.disabled = false;
-                previewBtn.textContent = previousText;
-            }
-        });
-
-        pdfBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            exportLabelPreviewToPDF();
-        });
-
-        pngBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            downloadAllLabelPNGs();
-        });
-
-        previewPages.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('download-single-label')) return;
-            e.preventDefault();
-            const index = Number(e.target.dataset.index);
-            downloadSingleLabel(index);
+        printBtn.addEventListener('click', async () => {
+            await printLocationLabels(locations);
         });
     };
-
     const renderHistory = () => {
       document.body.classList.remove('move-mode-active');
       moveOperation = null;

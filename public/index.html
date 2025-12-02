@@ -783,7 +783,10 @@
                 JSON.stringify(labelTemplatesCatalog) !== JSON.stringify(serverTemplates) ||
                 listsChanged) {
 
-                inventory = serverInventory;
+                inventory = serverInventory.map((item) => {
+                  const normalizedLocationId = normalizeLocationId(item.locationId);
+                  return normalizedLocationId ? { ...item, locationId: normalizedLocationId } : item;
+                });
                 history = serverHistory;
                 productList = serverProducts;
                 labelTemplatesCatalog = serverTemplates;
@@ -867,6 +870,29 @@
         section: Number(section),
         slot: slot.toUpperCase(),
       };
+    };
+
+    const normalizeLocationId = (locationId) => {
+      if (!locationId || typeof locationId !== 'string') return null;
+      const parsed = parseLocationId(locationId);
+      if (parsed) return `${parsed.letter}${parsed.section}-${parsed.slot}`;
+
+      const legacyMatch = locationId.trim().match(/^([A-Z]+)-([A-ZÇÃ]+)$/i);
+      if (!legacyMatch) return null;
+
+      const [, letter, slot] = legacyMatch;
+      const normalizedSlot = slot.toUpperCase();
+      const defaultSection = mapLayout.sections[0] || '1';
+      return `${letter.toUpperCase()}${defaultSection}-${normalizedSlot}`;
+    };
+
+    const locationIdsMatch = (a, b) => {
+      const normA = normalizeLocationId(a);
+      const normB = normalizeLocationId(b);
+      if (normA && normB) return normA === normB;
+      if (normA) return normA === b;
+      if (normB) return normB === a;
+      return a === b;
     };
 
     const compareLocations = (a, b) => {
@@ -1430,11 +1456,11 @@
     };
 
     const renderDashboard = () => {
-      document.body.classList.remove('move-mode-active'); 
+      document.body.classList.remove('move-mode-active');
       moveOperation = null;
       const container = document.getElementById('page-home');
       const totalBoxes = inventory.reduce((s, i) => s + i.quantity, 0);
-      const occupiedSlots = new Set(inventory.map(i => i.locationId)).size;
+      const occupiedSlots = new Set(inventory.map(i => normalizeLocationId(i.locationId) || i.locationId)).size;
       const totalSlots = mapLayout.locations.length * mapLayout.sections.length * mapLayout.slots.length;
 
       const productCounts = inventory.reduce((acc, i) => {
@@ -2088,7 +2114,7 @@
         const sectionsHtml = mapLayout.sections.map(section => {
           const slotsHtml = mapLayout.slots.map(slot => {
             const slotId = `${loc}${section}-${slot}`;
-            const itemsInSlot = inventory.filter(i => i.locationId === slotId);
+            const itemsInSlot = inventory.filter(i => locationIdsMatch(i.locationId, slotId));
             const qtyInSlot = itemsInSlot.reduce((sum, item) => sum + item.quantity, 0);
             const hasItems = qtyInSlot > 0;
             let slotClass = hasItems ? 'bg-blue-500 hover:bg-blue-600 text-white' : 'bg-gray-200 hover:bg-gray-300';
@@ -2129,11 +2155,11 @@
       document.querySelectorAll('.map-card-position').forEach(cell => {
           cell.addEventListener('click', () => {
               const locationId = cell.dataset.locationId;
-              
+
               if(moveOperation) {
                   handleMoveSelection(locationId);
               } else {
-                  const items = inventory.filter(i => i.locationId === locationId);
+                  const items = inventory.filter(i => locationIdsMatch(i.locationId, locationId));
                   showMapCellModal(locationId, items);
               }
           });
@@ -2147,7 +2173,7 @@
               const parentCard = cell.parentElement;
               const hasMatchInCard = Array.from(parentCard.querySelectorAll('.map-card-position')).some(pos => {
                   const locationId = pos.dataset.locationId;
-                  const itemsInPos = inventory.filter(i => i.locationId === locationId);
+                  const itemsInPos = inventory.filter(i => locationIdsMatch(i.locationId, locationId));
                   return itemsInPos.some(item => {
                     const product = productList.find(p => p.id === item.productId);
                     return product && product.nomeCompleto.toLowerCase().includes(searchTerm);
@@ -2158,7 +2184,7 @@
                   parentCard.classList.add('opacity-25');
               } else if (searchTerm && hasMatchInCard) {
                   const locationId = cell.dataset.locationId;
-                  const items = inventory.filter(i => i.locationId === locationId);
+                  const items = inventory.filter(i => locationIdsMatch(i.locationId, locationId));
                   const cellHasMatch = items.some(item => {
                       const product = productList.find(p => p.id === item.productId);
                       return product && product.nomeCompleto.toLowerCase().includes(searchTerm);
@@ -2764,7 +2790,7 @@
             <ul class="divide-y divide-gray-200 -mx-6 px-6 mb-4 max-h-60 overflow-y-auto">
                 ${items.map((item) => {
                     const product = productList.find(p => p.id === item.productId);
-                    const inventoryIndex = inventory.findIndex(invItem => invItem.locationId === locationId && invItem.productId === item.productId);
+                    const inventoryIndex = inventory.findIndex(invItem => locationIdsMatch(invItem.locationId, locationId) && invItem.productId === item.productId);
                     return `<li class="py-3">
                         <div class="flex justify-between items-center">
                             <div>
@@ -2837,7 +2863,7 @@
         if (!moveOperation) return;
         const { itemToMove } = moveOperation;
 
-        if (destinationLocationId === itemToMove.locationId) {
+        if (locationIdsMatch(destinationLocationId, itemToMove.locationId)) {
             showToast('Origem e destino não podem ser os mesmos.', 'error');
             return;
         }
@@ -2881,7 +2907,7 @@
             showToast('Quantidade inválida.', 'error'); return;
         }
 
-        const sourceItemIndex = inventory.findIndex(i => i.locationId === itemToMove.locationId && i.productId === itemToMove.productId);
+        const sourceItemIndex = inventory.findIndex(i => locationIdsMatch(i.locationId, itemToMove.locationId) && i.productId === itemToMove.productId);
         if(sourceItemIndex === -1) {
             showToast('Erro: item de origem não encontrado.', 'error'); return;
         }
@@ -2892,7 +2918,7 @@
             inventory[sourceItemIndex].quantity -= quantityToMove;
         }
 
-        const destItemIndex = inventory.findIndex(i => i.locationId === destinationLocationId && i.productId === itemToMove.productId);
+        const destItemIndex = inventory.findIndex(i => locationIdsMatch(i.locationId, destinationLocationId) && i.productId === itemToMove.productId);
         if (destItemIndex > -1) {
             inventory[destItemIndex].quantity += quantityToMove;
         } else {
@@ -2912,16 +2938,18 @@
 
     async function registerEntry(product, quantity, locationId) {
         if (!product || !quantity || !locationId) return;
-        
-        const existingItemIndex = inventory.findIndex(item => item.locationId === locationId && item.productId === product.id);
+
+        const normalizedLocationId = normalizeLocationId(locationId) || locationId;
+
+        const existingItemIndex = inventory.findIndex(item => locationIdsMatch(item.locationId, normalizedLocationId) && item.productId === product.id);
 
         if (existingItemIndex > -1) {
             inventory[existingItemIndex].quantity += quantity;
         } else {
-            inventory.push({ locationId: locationId, productId: product.id, quantity: quantity });
+            inventory.push({ locationId: normalizedLocationId, productId: product.id, quantity: quantity });
         }
 
-        addHistory('ENTRADA', `+${quantity} caixas de ${product.nomeCompleto} em ${locationId}`);
+        addHistory('ENTRADA', `+${quantity} caixas de ${product.nomeCompleto} em ${normalizedLocationId}`);
         const saved = await persistInventory();
         if (!saved) return;
         showToast('Entrada registrada com sucesso!');

@@ -2394,7 +2394,7 @@
         moveOperation = null;
 
         const container = document.getElementById('page-etiquetas');
-        const locations = mapLayout.locations.slice();
+        const locations = mapLayout.locations.flatMap(loc => mapLayout.positions.map(pos => `${loc}-${pos}`));
 
         container.innerHTML = `
             <div class="space-y-6">

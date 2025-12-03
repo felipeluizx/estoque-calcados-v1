@@ -649,7 +649,7 @@
 
     const createLocationLabelCanvas = async (locationCode) => {
       const WIDTH_MM = 100;
-      const HEIGHT_MM = 150;
+      const HEIGHT_MM = 70;
       const DPI = 300;
       const widthPx = Math.round((WIDTH_MM / 25.4) * DPI);
       const heightPx = Math.round((HEIGHT_MM / 25.4) * DPI);
@@ -669,21 +669,21 @@
       ctx.fillStyle = '#0f172a';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.font = `800 ${Math.floor(heightPx * 0.08)}px "Inter", sans-serif`;
-      ctx.fillText('POSIÇÃO', widthPx / 2, Math.floor(heightPx * 0.06));
+      ctx.font = `800 ${Math.floor(heightPx * 0.1)}px "Inter", sans-serif`;
+      ctx.fillText('POSIÇÃO', widthPx / 2, Math.floor(heightPx * 0.05));
 
-      ctx.font = `900 ${Math.floor(heightPx * 0.24)}px "Inter", sans-serif`;
-      ctx.fillText(locationCode, widthPx / 2, Math.floor(heightPx * 0.14));
+      ctx.font = `900 ${Math.floor(Math.min(heightPx * 0.32, widthPx * 0.22))}px "Inter", sans-serif`;
+      ctx.fillText(locationCode, widthPx / 2, Math.floor(heightPx * 0.18));
 
       const qrPayload = JSON.stringify({ type: 'location', location: locationCode });
-      const qrSize = Math.floor(widthPx * 0.65);
+      const qrSize = Math.floor(Math.min(widthPx * 0.45, heightPx * 0.55));
       const qrCanvas = await createQRCodeCanvas(qrPayload, qrSize, 'H');
       const qrX = (widthPx - qrSize) / 2;
-      const qrY = Math.floor(heightPx * 0.4);
+      const qrY = Math.floor(heightPx * 0.35);
       ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
       ctx.textBaseline = 'middle';
-      ctx.font = `600 ${Math.floor(heightPx * 0.05)}px "Inter", sans-serif`;
+      ctx.font = `600 ${Math.floor(heightPx * 0.06)}px "Inter", sans-serif`;
       ctx.fillStyle = '#334155';
       ctx.fillText('Escaneie para informar localização', widthPx / 2, heightPx - Math.floor(heightPx * 0.08));
 
@@ -704,13 +704,13 @@
       }
 
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [100, 150] });
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [100, 70] });
 
       for (let i = 0; i < locations.length; i += 1) {
         const location = locations[i];
         const canvas = await getLocationLabelCanvas(location);
         if (i !== 0) doc.addPage();
-        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 100, 150);
+        doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, 100, 70);
       }
 
       doc.save('etiquetas-posicao.pdf');
@@ -2471,8 +2471,8 @@
         moveOperation = null;
 
         const container = document.getElementById('page-etiquetas');
-        const locations = mapLayout.locations.flatMap(loc =>
-            mapLayout.sections.flatMap(section => mapLayout.slots.map(slot => `${loc}${section}-${slot}`))
+        const baseLocations = mapLayout.locations.flatMap(loc =>
+            mapLayout.sections.map(section => `${loc}${section}`)
         );
 
         container.innerHTML = `
@@ -2481,7 +2481,7 @@
                     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
                             <h1 class="text-3xl font-bold mb-2">Etiquetas de Posição</h1>
-                            <p class="text-gray-600 text-sm">Gere etiquetas no formato 100 x 150 mm com QR Code grande e legível para todas as posições cadastradas.</p>
+                            <p class="text-gray-600 text-sm">Gere etiquetas no formato 100 x 70 mm com QR Code grande e legível para todas as posições cadastradas.</p>
                             <p class="text-xs text-gray-500 mt-1">Formato pronto para impressão térmica ou laser. Cada QR Code codifica {"type":"location","location":"X"}.</p>
                         </div>
                         <div class="flex flex-wrap gap-3">
@@ -2491,7 +2491,7 @@
                             </button>
                             <button id="location-pdf-all" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 font-semibold flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21h10"/><path d="M12 17v4"/><path d="M17 5v-2a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v2"/><path d="M17 5H7"/><rect width="14" height="14" x="5" y="5" rx="2"/></svg>
-                                Baixar PDF (100x150)
+                                Baixar PDF (100x70)
                             </button>
                             <button id="location-png-all" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 font-semibold border border-gray-200 flex items-center gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
@@ -2500,7 +2500,7 @@
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-4 text-sm text-gray-600">
-                        <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200"><span class="font-semibold text-gray-900 text-lg">${locations.length}</span> posições disponíveis</div>
+                        <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200"><span class="font-semibold text-gray-900 text-lg">${baseLocations.length}</span> posições disponíveis</div>
                         <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">QR Code dedicado por posição</div>
                         <div class="flex items-center gap-2 bg-gray-50 px-3 py-2 rounded-md border border-gray-200">Layout otimizado para leitura rápida</div>
                     </div>
@@ -2518,7 +2518,7 @@
 
         const renderPreviews = async () => {
             grid.innerHTML = '';
-            for (const location of locations) {
+            for (const location of baseLocations) {
                 const canvas = await getLocationLabelCanvas(location);
                 const card = document.createElement('div');
                 card.className = 'bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col gap-3';
@@ -2528,7 +2528,7 @@
                             <p class="text-xs uppercase text-gray-500">Posição</p>
                             <p class="text-2xl font-black text-gray-900">${location}</p>
                         </div>
-                        <span class="text-[11px] text-gray-500">100 x 150 mm</span>
+                        <span class="text-[11px] text-gray-500">100 x 70 mm</span>
                     </div>
                     <div class="bg-gray-50 border border-dashed border-gray-200 rounded-md overflow-hidden">
                         <img src="${canvas.toDataURL('image/png')}" alt="Etiqueta ${location}" class="w-full h-auto block">
@@ -2557,15 +2557,15 @@
         renderPreviews();
 
         pdfBtn.addEventListener('click', async () => {
-            await downloadLocationLabelsPDF(locations);
+            await downloadLocationLabelsPDF(baseLocations);
         });
 
         pngBtn.addEventListener('click', async () => {
-            await downloadLocationLabelPNGs(locations);
+            await downloadLocationLabelPNGs(baseLocations);
         });
 
         printBtn.addEventListener('click', async () => {
-            await printLocationLabels(locations);
+            await printLocationLabels(baseLocations);
         });
     };
     const renderHistory = () => {

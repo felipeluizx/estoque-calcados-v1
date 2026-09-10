@@ -46,12 +46,13 @@ async function handleSave({ request, env }) {
     if (!(await requireAdmin(request, env))) return unauthorized();
     await ensureTable(env);
     const body = await request.json().catch(() => ({}));
+    const bulkItems = Array.isArray(body.items) ? body.items : (Array.isArray(body.prices) ? body.prices : null);
 
-    if (Array.isArray(body.items)) {
-      if (!body.items.length) return json({ ok: false, error: "Nenhum SKU informado." }, 400);
-      if (body.items.length > 1000) return json({ ok: false, error: "Limite de 1000 itens por operação." }, 400);
+    if (bulkItems) {
+      if (!bulkItems.length) return json({ ok: false, error: "Nenhum SKU informado." }, 400);
+      if (bulkItems.length > 1000) return json({ ok: false, error: "Limite de 1000 itens por operação." }, 400);
 
-      const normalized = body.items.map(item => {
+      const normalized = bulkItems.map(item => {
         const productId = Number(item.product_id);
         if (!productId) throw new Error("Há um SKU/produto inválido na seleção.");
         return { productId, basePrice: normalizePrice(item.base_price) };

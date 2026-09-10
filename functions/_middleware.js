@@ -48,7 +48,8 @@ export async function onRequest(context) {
     const compatScript = '<script src="/js/card-compat.js?v=20260910-1" defer></script>';
     const gradeScript = '<script src="/js/grade-order.js?v=20260910-1" defer></script>';
     const refreshScript = '<script src="/js/live-refresh-variation.js?v=20260910-2" defer></script>';
-    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript]) {
+    const deleteScript = '<script src="/js/delete-controls.js?v=20260910-1" defer></script>';
+    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript]) {
       const src = script.match(/src="([^"]+)/)?.[1];
       if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
     }

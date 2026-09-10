@@ -1,4 +1,5 @@
 import { requireAdmin, unauthorized } from "../lib/admin-auth.js";
+import { ensureV2Schema } from "../lib/v2-schema.js";
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -22,6 +23,7 @@ function mapOrder(o) {
 export async function onRequestGet({ request, env }) {
   try {
     if (!(await requireAdmin(request, env))) return unauthorized();
+    await ensureV2Schema(env);
     const url = new URL(request.url);
     const orderId = Number(url.searchParams.get("id") || 0);
     const baseSql = `
@@ -61,6 +63,7 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   try {
     if (!(await requireAdmin(request, env))) return unauthorized();
+    await ensureV2Schema(env);
     const body = await request.json().catch(() => ({}));
     const customerId = Number(body.customer_id);
     const items = Array.isArray(body.items) ? body.items : [];
@@ -117,6 +120,7 @@ export async function onRequestPost({ request, env }) {
 export async function onRequestPut({ request, env }) {
   try {
     if (!(await requireAdmin(request, env))) return unauthorized();
+    await ensureV2Schema(env);
     const body = await request.json().catch(() => ({}));
     const type = body.type || "order";
 

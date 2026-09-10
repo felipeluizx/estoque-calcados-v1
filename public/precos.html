@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d10">
+  <title>Preços dos SKUs · Estoque Calçados</title>
+  <link rel="stylesheet" href="/css/precos.css?v=20260910-1">
+</head>
+<body>
+  <div id="loginGate" class="login-gate hidden">
+    <form id="loginForm" class="login-card">
+      <div class="brand">EC</div>
+      <span class="preview-badge">ADMINISTRAÇÃO</span>
+      <h1>Preços dos SKUs</h1>
+      <p>Use o mesmo login do sistema.</p>
+      <label>Usuário<input id="loginUsername" autocomplete="username"></label>
+      <label>Senha<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+      <label class="remember"><input id="rememberLogin" type="checkbox" checked> Manter sessão</label>
+      <button id="loginBtn" class="btn primary wide" type="submit">Entrar</button>
+      <div id="loginError" class="error-text"></div>
+    </form>
+  </div>
+
+  <div id="app" class="app hidden">
+    <header class="topbar">
+      <div class="title-group">
+        <button id="backBtn" class="icon-btn" title="Voltar">←</button>
+        <div>
+          <span class="eyebrow">ADMIN · CATÁLOGO</span>
+          <h1>Preços dos SKUs</h1>
+          <p>Catálogo vindo do KV · preços-base salvos no D1</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="reloadBtn" class="btn secondary">Atualizar</button>
+        <button id="saveBtn" class="btn primary" disabled>Salvar alterações <span id="dirtyCount"></span></button>
+      </div>
+    </header>
+
+    <main class="content">
+      <section class="summary-grid">
+        <article class="summary-card"><span>Produtos</span><strong id="statProducts">—</strong></article>
+        <article class="summary-card"><span>Com preço</span><strong id="statPriced">—</strong></article>
+        <article class="summary-card"><span>Sem preço</span><strong id="statMissing">—</strong></article>
+        <article class="summary-card accent"><span>Selecionados</span><strong id="statSelected">0</strong></article>
+      </section>
+
+      <section class="panel bulk-panel">
+        <div class="panel-head">
+          <div><h2>Preenchimento em massa</h2><p>Selecione os produtos, informe um preço e aplique. Você pode repetir isso para vários grupos antes de salvar.</p></div>
+        </div>
+        <div class="bulk-row">
+          <div class="money-input"><span>R$</span><input id="bulkPrice" type="number" min="0" step="0.01" placeholder="0,00"></div>
+          <button id="applyBulkBtn" class="btn warning">Aplicar aos selecionados</button>
+          <button id="clearSelectedPriceBtn" class="btn secondary">Limpar preço dos selecionados</button>
+          <button id="clearSelectionBtn" class="btn ghost">Desmarcar tudo</button>
+        </div>
+        <div class="hint">As alterações só são gravadas quando você clicar em <strong>Salvar alterações</strong>.</div>
+      </section>
+
+      <section class="panel filters-panel">
+        <div class="filters">
+          <label class="search"><span>⌕</span><input id="searchInput" placeholder="Buscar SKU, ID, modelo, grade, material ou cor"></label>
+          <select id="modelFilter"><option value="">Todos os modelos</option></select>
+          <select id="gradeFilter"><option value="">Todas as grades</option></select>
+          <select id="materialFilter"><option value="">Todos os materiais</option></select>
+          <select id="variationFilter"><option value="">Todas as cores</option></select>
+          <select id="priceFilter">
+            <option value="all">Com e sem preço</option>
+            <option value="missing">Somente sem preço</option>
+            <option value="priced">Somente com preço</option>
+          </select>
+        </div>
+        <div class="filter-foot">
+          <span id="visibleCount">—</span>
+          <div class="filter-actions"><button id="selectVisibleBtn" class="text-btn">Selecionar visíveis</button><button id="selectMissingBtn" class="text-btn">Selecionar sem preço</button></div>
+        </div>
+      </section>
+
+      <section class="table-panel">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th class="check-col"><input id="selectAllCheck" type="checkbox"></th>
+                <th>SKU / ID</th>
+                <th>Modelo</th>
+                <th>Grade</th>
+                <th>Material</th>
+                <th>Variação / Cor</th>
+                <th class="price-head">Preço-base</th>
+              </tr>
+            </thead>
+            <tbody id="priceTableBody"><tr><td colspan="7" class="empty">Carregando...</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <div id="saveBar" class="save-bar">
+      <span><strong id="saveBarCount">0</strong> alteração(ões) não salva(s)</span>
+      <button id="saveBarBtn" class="btn primary">Salvar agora</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="/js/precos.js?v=20260910-1" defer></script>
+</body>
+</html>

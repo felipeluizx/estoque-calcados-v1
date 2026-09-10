@@ -1,23 +1,37 @@
-// very small offline-first for static shell
-self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open('estoque-static-v1').then((cache) => cache.addAll([
-      '/',
-      '/index.html',
-      'https://cdn.tailwindcss.com',
-      'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
-    ]))
+const CACHE_NAME = 'estoque-static-v2';
+const STATIC_SHELL = ['/', '/index.html'];
+
+self.addEventListener('install', event => {
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_SHELL)));
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))),
+      self.clients.claim(),
+    ])
   );
 });
-self.addEventListener('fetch', (event) => {
+
+self.addEventListener('fetch', event => {
   const req = event.request;
-  const isAPI = req.url.includes('/api/');
-  if (isAPI) return; // don't cache API by default
+  const url = new URL(req.url);
+
+  if (url.pathname.startsWith('/api/')) return;
+
+  // V2 deve sempre buscar a versão mais nova durante o desenvolvimento/preview.
+  if (url.pathname === '/v2.html' || url.pathname.startsWith('/js/v2') || url.pathname.startsWith('/css/v2')) {
+    event.respondWith(fetch(req, { cache: 'no-store' }));
+    return;
+  }
+
   event.respondWith(
-    caches.match(req).then(cached => cached || fetch(req).then(res => {
+    fetch(req).then(res => {
       const clone = res.clone();
-      caches.open('estoque-static-v1').then(c => c.put(req, clone));
+      caches.open(CACHE_NAME).then(cache => cache.put(req, clone));
       return res;
-    }).catch(()=> cached))
+    }).catch(() => caches.match(req))
   );
 });

@@ -7,13 +7,24 @@ const json = (data, status = 200) => new Response(JSON.stringify(data), {
 
 const nullableNumber = value => value === undefined || value === null || value === "" ? null : Number(value);
 
+function mapOrder(o) {
+  const ordered = Number(o.quantity_ordered || 0);
+  const produced = Number(o.quantity_produced || 0);
+  const cancelled = Number(o.quantity_cancelled || 0);
+  const remaining = Math.max(ordered - produced - cancelled, 0);
+  let production_status = "pending";
+  if (ordered > 0 && remaining === 0) production_status = "completed";
+  else if (produced > 0 || cancelled > 0) production_status = "partial";
+  if (o.manually_closed_at) production_status = "closed";
+  return { ...o, quantity_remaining: remaining, production_status };
+}
+
 export async function onRequestGet({ request, env }) {
   try {
     if (!(await requireAdmin(request, env))) return unauthorized();
     const url = new URL(request.url);
     const orderId = Number(url.searchParams.get("id") || 0);
-
-    const { results } = await env.DB.prepare(`
+    const baseSql = `
       SELECT
         o.id, o.pc, o.order_date, o.due_date, o.notes, o.priority, o.manually_closed_at,
         c.id AS customer_id, c.name AS customer_name, c.phone AS customer_phone,
@@ -25,62 +36,22 @@ export async function onRequestGet({ request, env }) {
       FROM orders o
       JOIN customers c ON c.id = o.customer_id
       LEFT JOIN order_items oi ON oi.order_id = o.id
-      ${orderId ? "WHERE o.id = ?" : ""}
-      GROUP BY o.id
-      ORDER BY
-        CASE WHEN o.manually_closed_at IS NULL THEN 0 ELSE 1 END,
-        o.priority DESC,
-        COALESCE(o.due_date, o.order_date) ASC,
-        o.order_date ASC
-    `)${orderId ? `.bind(${orderId})` : ""};
+    `;
 
     let query;
     if (orderId) {
-      query = await env.DB.prepare(`
-        SELECT
-          o.id, o.pc, o.order_date, o.due_date, o.notes, o.priority, o.manually_closed_at,
-          c.id AS customer_id, c.name AS customer_name, c.phone AS customer_phone,
-          COUNT(oi.id) AS item_count,
-          COALESCE(SUM(oi.quantity_ordered), 0) AS quantity_ordered,
-          COALESCE(SUM(oi.quantity_cancelled), 0) AS quantity_cancelled,
-          COALESCE(SUM((SELECT COALESCE(SUM(pm.quantity),0) FROM production_movements pm WHERE pm.order_item_id = oi.id)), 0) AS quantity_produced,
-          COALESCE(SUM(COALESCE(oi.unit_price,0) * oi.quantity_ordered), 0) AS order_value
-        FROM orders o
-        JOIN customers c ON c.id = o.customer_id
-        LEFT JOIN order_items oi ON oi.order_id = o.id
-        WHERE o.id = ?
-        GROUP BY o.id
-      `).bind(orderId).all();
+      query = await env.DB.prepare(`${baseSql} WHERE o.id = ? GROUP BY o.id`).bind(orderId).all();
     } else {
-      query = await env.DB.prepare(`
-        SELECT
-          o.id, o.pc, o.order_date, o.due_date, o.notes, o.priority, o.manually_closed_at,
-          c.id AS customer_id, c.name AS customer_name, c.phone AS customer_phone,
-          COUNT(oi.id) AS item_count,
-          COALESCE(SUM(oi.quantity_ordered), 0) AS quantity_ordered,
-          COALESCE(SUM(oi.quantity_cancelled), 0) AS quantity_cancelled,
-          COALESCE(SUM((SELECT COALESCE(SUM(pm.quantity),0) FROM production_movements pm WHERE pm.order_item_id = oi.id)), 0) AS quantity_produced,
-          COALESCE(SUM(COALESCE(oi.unit_price,0) * oi.quantity_ordered), 0) AS order_value
-        FROM orders o
-        JOIN customers c ON c.id = o.customer_id
-        LEFT JOIN order_items oi ON oi.order_id = o.id
+      query = await env.DB.prepare(`${baseSql}
         GROUP BY o.id
-        ORDER BY CASE WHEN o.manually_closed_at IS NULL THEN 0 ELSE 1 END, o.priority DESC, COALESCE(o.due_date, o.order_date) ASC, o.order_date ASC
+        ORDER BY CASE WHEN o.manually_closed_at IS NULL THEN 0 ELSE 1 END,
+                 o.priority DESC,
+                 COALESCE(o.due_date, o.order_date) ASC,
+                 o.order_date ASC
       `).all();
     }
 
-    const orders = (query.results || []).map(o => {
-      const ordered = Number(o.quantity_ordered || 0);
-      const produced = Number(o.quantity_produced || 0);
-      const cancelled = Number(o.quantity_cancelled || 0);
-      const remaining = Math.max(ordered - produced - cancelled, 0);
-      let production_status = "pending";
-      if (ordered > 0 && remaining === 0) production_status = "completed";
-      else if (produced > 0 || cancelled > 0) production_status = "partial";
-      if (o.manually_closed_at) production_status = "closed";
-      return { ...o, quantity_remaining: remaining, production_status };
-    });
-
+    const orders = (query.results || []).map(mapOrder);
     return json({ ok: true, orders, order: orderId ? orders[0] || null : undefined });
   } catch (err) {
     return json({ ok: false, error: err.message }, 500);

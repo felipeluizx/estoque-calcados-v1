@@ -1,5 +1,4 @@
-const SESSION_PREFIX = "admin-session:";
-const SESSION_TTL_SECONDS = 60 * 60 * 24; // 24 horas
+const SESSION_TTL_SECONDS = 60 * 60 * 24;
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
@@ -10,33 +9,46 @@ const json = (obj, status = 200) =>
     },
   });
 
-function getKvBinding(env) {
-  const kv = env?.KV_BINDING || env?.ESTOQUE_DB;
-  if (!kv || typeof kv.put !== "function") {
-    throw new Error("Binding KV (KV_BINDING/ESTOQUE_DB) não encontrado.");
-  }
-  return kv;
+function toBase64Url(bytes) {
+  let binary = "";
+  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  for (const byte of view) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function signToken(secret, payload) {
+  const enc = new TextEncoder();
+  const body = toBase64Url(enc.encode(JSON.stringify(payload)));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
+  return `${body}.${toBase64Url(sig)}`;
 }
 
 export const onRequestPost = async ({ request, env }) => {
   try {
     const adminPassword = env?.ADMIN_PASSWORD;
     const adminUsername = env?.ADMIN_USERNAME || env?.ADMIN_USER || "";
+
     if (!adminPassword) {
-      return json({ ok: false, error: "ADMIN_PASSWORD não configurado." }, 500);
+      return json({ ok: false, error: "ADMIN_PASSWORD não configurado no ambiente de Preview." }, 500);
     }
 
     let body = {};
-    if (request.headers.get("content-type")?.includes("application/json")) {
-      try {
-        body = await request.json();
-      } catch (err) {
-        return json({ ok: false, error: "JSON inválido." }, 400);
-      }
+    try {
+      body = await request.json();
+    } catch {
+      return json({ ok: false, error: "JSON inválido." }, 400);
     }
 
-    const providedPassword = body?.password;
-    const providedUser = body?.username?.trim?.();
+    const providedPassword = String(body?.password || "");
+    const providedUser = String(body?.username || "").trim();
+
     if (!providedPassword) {
       return json({ ok: false, error: "Campo 'password' é obrigatório." }, 400);
     }
@@ -50,19 +62,21 @@ export const onRequestPost = async ({ request, env }) => {
     }
 
     if (providedPassword !== adminPassword) {
-      return json({ ok: false, error: "Senha incorreta." }, 401);
+      return json({ ok: false, error: "Usuário ou senha incorretos." }, 401);
     }
 
-    const kv = getKvBinding(env);
-    const token = crypto.randomUUID();
-    const key = `${SESSION_PREFIX}${token}`;
-    await kv.put(key, JSON.stringify({ createdAt: new Date().toISOString() }), {
-      expirationTtl: SESSION_TTL_SECONDS,
-    });
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      sub: providedUser || "admin",
+      iat: now,
+      exp: now + SESSION_TTL_SECONDS,
+      v: 2,
+    };
+    const token = await signToken(adminPassword, payload);
 
     return json({ ok: true, token, expiresIn: SESSION_TTL_SECONDS });
   } catch (err) {
     console.error("[admin-login]", err);
-    return json({ ok: false, error: "Falha ao autenticar." }, 500);
+    return json({ ok: false, error: `Falha ao autenticar: ${err?.message || "erro desconhecido"}` }, 500);
   }
 };

@@ -1,4 +1,5 @@
 const SESSION_TTL_SECONDS = 60 * 60 * 24;
+const SESSION_PREFIX = "admin-session:";
 
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
@@ -35,7 +36,7 @@ export const onRequestPost = async ({ request, env }) => {
     const adminPassword = env?.ADMIN_PASSWORD;
     const adminUsername = env?.ADMIN_USERNAME || env?.ADMIN_USER || "";
 
-    if (!adminPassword) return json({ ok: false, error: "ADMIN_PASSWORD não configurado no Preview." }, 500);
+    if (!adminPassword) return json({ ok: false, error: "ADMIN_PASSWORD não configurado." }, 500);
 
     let body = {};
     try { body = await request.json(); }
@@ -56,6 +57,22 @@ export const onRequestPost = async ({ request, env }) => {
       exp: now + SESSION_TTL_SECONDS,
       v: 3,
     });
+
+    // Compatibilidade com o estoque legado: as APIs antigas ainda validam
+    // a sessão por uma chave temporária no KV. Se o binding existir, gravamos
+    // o mesmo token assinado também no KV. A V2 não depende dessa gravação.
+    const kv = env?.KV_BINDING || env?.ESTOQUE_DB;
+    if (kv && typeof kv.put === "function") {
+      try {
+        await kv.put(
+          `${SESSION_PREFIX}${token}`,
+          JSON.stringify({ username: providedUser || "admin", createdAt: new Date().toISOString() }),
+          { expirationTtl: SESSION_TTL_SECONDS }
+        );
+      } catch (kvErr) {
+        console.warn("[admin-login] Não foi possível espelhar sessão no KV:", kvErr);
+      }
+    }
 
     return json({ ok: true, token, expiresIn: SESSION_TTL_SECONDS });
   } catch (err) {

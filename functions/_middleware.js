@@ -6,21 +6,10 @@ export async function onRequest(context) {
     return Response.redirect(new URL('/app.html', url.origin).toString(), 302);
   }
 
+  // O sistema legado continua sendo o public/index.html original.
+  // Usamos redirect explícito + query de versão para evitar qualquer resposta antiga em cache.
   if (request.method === 'GET' && (url.pathname === '/legacy' || url.pathname === '/legacy.html')) {
-    const legacyUrl = new URL('/index.html', url.origin);
-    const legacyRequest = new Request(legacyUrl.toString(), request);
-    const legacyResponse = await context.next(legacyRequest);
-    const contentType = legacyResponse.headers.get('content-type') || '';
-    if (!contentType.includes('text/html')) return legacyResponse;
-    let html = await legacyResponse.text();
-    const script = '<script src="/js/price-admin-bridge.js?v=20260910-4" defer></script>';
-    if (!html.includes('/js/price-admin-bridge.js')) {
-      html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
-    }
-    const headers = new Headers(legacyResponse.headers);
-    headers.delete('content-length');
-    headers.set('cache-control', 'no-cache, no-store, must-revalidate');
-    return new Response(html, { status: 200, headers });
+    return Response.redirect(new URL('/index.html?legacy=20260910-2', url.origin).toString(), 302);
   }
 
   const response = await context.next();
@@ -35,7 +24,7 @@ export async function onRequest(context) {
   headers.set('cache-control', 'no-cache, no-store, must-revalidate');
 
   if (url.pathname === '/index.html') {
-    const script = '<script src="/js/price-admin-bridge.js?v=20260910-4" defer></script>';
+    const script = '<script src="/js/price-admin-bridge.js?v=20260910-5" defer></script>';
     if (!html.includes('/js/price-admin-bridge.js')) {
       html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
     }

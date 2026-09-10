@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0b0d">
+  <title>Estoque Calçados</title>
+  <link rel="stylesheet" href="/css/v2.css?v=20260910-5">
+</head>
+<body>
+  <div id="loginGate" class="login-gate hidden">
+    <form id="loginForm" class="login-card">
+      <div class="brand-mark">EC</div><h1>Estoque Calçados</h1><p>Pedidos, produção, clientes e financeiro.</p>
+      <label>Usuário<input id="loginUsername" autocomplete="username" placeholder="Usuário"></label>
+      <label>Senha<input id="loginPassword" type="password" autocomplete="current-password" placeholder="Senha" required></label>
+      <label class="remember"><input id="rememberLogin" type="checkbox"> Manter sessão</label>
+      <button class="btn primary wide" id="loginBtn" type="submit">Entrar</button><div id="loginError" class="form-error"></div>
+    </form>
+  </div>
+
+  <div id="appShell" class="shell hidden">
+    <aside class="sidebar">
+      <div class="sidebar-brand"><span class="brand-mark small">EC</span><div><strong>Estoque</strong><small>Pedidos & Produção</small></div></div>
+      <nav class="nav" aria-label="Navegação principal">
+        <button class="nav-item active" data-page="home"><span>⌂</span> Início</button>
+        <button class="nav-item" data-page="orders"><span>▣</span> Pedidos</button>
+        <button class="nav-item" data-page="customers"><span>◎</span> Clientes</button>
+        <button class="nav-item" data-page="finance"><span>R$</span> Financeiro</button>
+        <button class="nav-item" data-page="settings"><span>⚙</span> Ajustes</button>
+      </nav>
+      <div class="sidebar-foot"><button class="ghost-link" id="openLegacyBtn">Estoque antigo ↗</button><button class="ghost-link danger-text" id="logoutBtn">Sair</button></div>
+    </aside>
+
+    <main class="main">
+      <header class="mobile-head"><div class="sidebar-brand"><span class="brand-mark small">EC</span><strong>Estoque</strong></div><button class="icon-btn" id="mobileMenuBtn">☰</button></header>
+
+      <section class="page active" id="page-home">
+        <div class="page-head"><div><p class="eyebrow">VISÃO GERAL</p><h1>Início</h1><p class="lead">O que precisa da sua atenção agora.</p></div><div class="quick-actions"><button class="btn primary" id="newOrderBtn">+ Lançar pedido</button><button class="btn secondary" id="newPaymentBtn">+ Lançar pagamento</button></div></div>
+        <div class="hero-cards" id="heroCards">
+          <article class="hero-card tone-yellow" data-card="production" data-target-page="orders" data-target-filter="pending"><button class="card-menu" aria-label="Opções">•••</button><div class="hero-copy"><span class="hero-kicker">PRODUÇÃO</span><h2>Você tem <strong id="homePendingBoxes">—</strong> caixas a serem produzidas</h2></div><div class="progress-wrap"><div class="progress"><span id="productionProgressBar"></span></div><b id="productionProgressPct">0%</b></div><p class="progress-caption">Você já produziu <strong id="homeProducedBoxes">0</strong> de <strong id="homeTotalBoxes">0</strong> caixas</p></article>
+          <article class="hero-card tone-red" data-card="finance" data-target-page="finance" data-target-filter="open"><button class="card-menu" aria-label="Opções">•••</button><div class="hero-copy"><span class="hero-kicker">FINANCEIRO</span><h2><strong id="homeDebtorCustomers">—</strong> clientes te devem <strong class="money-private" id="homeReceivableAmount">—</strong></h2></div><div class="progress-wrap"><div class="progress"><span id="financeProgressBar"></span></div><b id="financeProgressPct">—</b></div><p class="progress-caption"><span id="homeOverdueText">Nenhum valor vencido</span> <button class="eye-btn" id="toggleMoneyBtn" title="Mostrar ou ocultar valores">◉</button></p></article>
+        </div>
+        <div class="home-strip"><button class="mini-stat" data-target-page="orders" data-target-filter="partial"><b id="homePartialItems">—</b><span>parciais</span></button><button class="mini-stat" data-target-page="orders" data-target-filter="overdue"><b id="homeOverdueOrders">—</b><span>atrasados</span></button><button class="mini-stat" data-target-page="orders" data-target-filter="all"><b id="homeOpenOrders">—</b><span>pedidos abertos</span></button></div>
+        <section class="panel compact-panel"><div class="panel-head"><div><h2>Próximos da fila</h2><p>Agrupados por SKU. Clique para ver clientes, quantidades, preços e dar baixa.</p></div><button class="text-btn" data-target-page="orders" data-target-filter="all">Ver todos →</button></div><div class="list-head home-list-head"><span>Produto / SKU</span><span>Clientes</span><span>Saldo</span><span></span></div><div id="homeProductionList" class="linear-list"></div></section>
+      </section>
+
+      <section class="page" id="page-orders">
+        <div class="page-head"><div><p class="eyebrow">OPERAÇÃO</p><h1>Pedidos</h1><p class="lead">Produção, pendências, histórico e preços por cliente.</p></div><button class="btn primary" id="newOrderBtn2">+ Lançar pedido</button></div>
+        <div class="tabs" id="orderTabs"><button class="tab active" data-filter="all">Todos</button><button class="tab" data-filter="pending">A produzir</button><button class="tab" data-filter="partial">Parciais</button><button class="tab" data-filter="overdue">Atrasados</button><button class="tab" data-filter="completed">Concluídos</button></div>
+        <div class="toolbar"><div class="searchbox">⌕<input id="searchInput" placeholder="Buscar SKU, modelo ou cliente"></div><select id="orderSort"><option value="priority">Prioridade</option><option value="oldest">Mais antigos</option><option value="newest">Mais recentes</option><option value="remaining">Maior saldo</option></select></div>
+        <section class="panel"><div class="list-head"><span></span><span>Produto / variação</span><span>Cliente</span><span>Saldo</span><span>Valor</span><span></span></div><div class="linear-list" id="productionList"><div class="empty">Carregando...</div></div></section>
+        <div class="selection-bar" id="selectionBar"><strong><span id="selectedCount">0</span> selecionado(s)</strong><div><button class="btn secondary" id="clearSelectionBtn">Limpar</button><button class="btn primary" id="confirmProductionBtn">Confirmar produção</button></div></div>
+      </section>
+
+      <section class="page" id="page-customers">
+        <div class="page-head"><div><p class="eyebrow">CADASTROS</p><h1>Clientes</h1><p class="lead">Cadastro, pedidos, produção e financeiro.</p></div><button class="btn primary" id="newCustomerBtn">+ Novo cliente</button></div>
+        <div class="toolbar"><div class="searchbox">⌕<input id="customerSearch" placeholder="Buscar cliente ou telefone"></div></div><section class="panel"><div id="customerList" class="customer-list"></div></section>
+      </section>
+
+      <section class="page" id="page-finance">
+        <div class="page-head"><div><p class="eyebrow">RECEBIMENTOS</p><h1>Financeiro</h1><p class="lead">Cobranças e pagamentos.</p></div><div class="quick-actions"><button class="btn secondary" id="newChargeBtn">+ Nova cobrança</button><button class="btn primary" id="newPaymentBtn2">+ Lançar pagamento</button></div></div>
+        <div class="finance-overview"><div><span>A receber</span><strong class="money-private" id="financeOpenTotal">—</strong></div><div><span>Clientes devendo</span><strong id="financeDebtors">—</strong></div><div><span>Vencido</span><strong class="danger money-private" id="financeOverdueTotal">—</strong></div></div>
+        <div class="tabs" id="financeTabs"><button class="tab active" data-filter="open">Em aberto</button><button class="tab" data-filter="overdue">Vencidos</button><button class="tab" data-filter="partial">Parciais</button><button class="tab" data-filter="paid">Pagos</button><button class="tab" data-filter="all">Todos</button></div><section class="panel"><div id="financeList" class="finance-list"></div></section>
+      </section>
+
+      <section class="page" id="page-settings">
+        <div class="page-head"><div><p class="eyebrow">PREFERÊNCIAS</p><h1>Ajustes</h1><p class="lead">Personalize aparência e comportamento da aplicação.</p></div></div>
+        <div class="settings-grid">
+          <section class="settings-card"><h2>Aparência</h2><p>Escolha como o aplicativo deve aparecer neste dispositivo.</p><div class="segmented" id="themeControl"><button data-theme-choice="light">Claro</button><button data-theme-choice="dark">Escuro</button><button data-theme-choice="system">Automático</button></div><label class="setting-row"><span><strong>Ocultar valores financeiros</strong><small>Esconde valores monetários na Home e Financeiro.</small></span><input type="checkbox" id="hideMoneySetting"></label></section>
+          <section class="settings-card"><h2>Home</h2><p>Defina cartões, cores e período dos indicadores.</p><label class="setting-row"><span><strong>Card de produção</strong><small>Caixas pendentes e progresso.</small></span><input type="checkbox" id="showProductionCard" checked></label><label class="setting-row"><span><strong>Card financeiro</strong><small>Clientes devedores e total a receber.</small></span><input type="checkbox" id="showFinanceCard" checked></label><div class="color-prefs"><label>Produção<select id="productionTone"><option value="yellow">Amarelo</option><option value="green">Verde</option><option value="red">Vermelho</option></select></label><label>Financeiro<select id="financeTone"><option value="red">Vermelho</option><option value="yellow">Amarelo</option><option value="green">Verde</option></select></label></div><label style="display:grid;gap:8px;margin-top:18px"><span><strong>Período dos indicadores</strong><small style="display:block">Define o período usado nos números e progresso da Home.</small></span><select id="homePeriodSetting"><option value="current">Pendências atuais</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="90">Últimos 90 dias</option><option value="month">Este mês</option><option value="all">Todo o histórico</option></select></label></section>
+          <section class="settings-card"><h2>Pedidos</h2><p>Preferências da fila operacional.</p><label>Ordenação padrão<select id="defaultOrderSort"><option value="priority">Prioridade e prazo</option><option value="oldest">Mais antigos primeiro</option><option value="newest">Mais recentes primeiro</option><option value="remaining">Maior saldo primeiro</option></select></label></section>
+          <section class="settings-card"><h2>Conta e segurança</h2><p>Credenciais administrativas do ambiente Cloudflare.</p><div class="account-box"><span>Usuário</span><strong id="currentUsername">Administrador</strong></div><button class="btn secondary" id="logoutSettingsBtn">Encerrar esta sessão</button></section>
+          <section class="settings-card"><h2>Sistema</h2><p>Produtos, preços e estoque legado.</p><div class="settings-links"><button id="managePricesBtn">Gerenciar preços-base dos SKUs →</button><button id="manageProductsBtn">Cadastrar / gerenciar produtos →</button><button id="legacyStockLink">Abrir estoque antigo ↗</button><button id="productsInfoBtn">Catálogo de SKUs: base KV existente</button></div></section>
+        </div>
+      </section>
+    </main>
+    <nav class="bottom-nav"><button class="active" data-page="home">⌂<span>Início</span></button><button data-page="orders">▣<span>Pedidos</span></button><button data-page="customers">◎<span>Clientes</span></button><button data-page="finance">R$<span>Financeiro</span></button><button data-page="settings">⚙<span>Ajustes</span></button></nav>
+  </div>
+
+  <div class="toast" id="toast"></div><datalist id="customerOptions"></datalist><datalist id="skuOptions"></datalist>
+
+  <div class="modal-backdrop" id="orderModal"><div class="modal wide-modal"><div class="modal-head"><div><span class="eyebrow">NOVO</span><h3>Lançar pedido</h3></div><button class="icon-btn" data-close="orderModal">×</button></div><div class="form-grid"><div class="field full"><label>Cliente — digite ou escolha</label><div class="dual-select"><input id="orderCustomerText" list="customerOptions" placeholder="Digite o nome ou telefone"><span>ou</span><select id="orderCustomer"></select></div></div><input id="orderPc" type="hidden" value=""><div class="field"><label>Data do pedido</label><input type="date" id="orderDate"></div><div class="field"><label>Prazo</label><input type="date" id="orderDueDate"></div><div class="field"><label>Prioridade</label><select id="orderPriority"><option value="0">Normal</option><option value="1">Alta</option><option value="2">Urgente</option></select></div><div class="field full"><label>Observação do pedido</label><textarea id="orderNotes" rows="2"></textarea></div><div class="field full"><div class="field-title-row"><label>Itens</label><button class="text-btn" id="addOrderItemBtn">+ Adicionar SKU</button></div><div class="items-box order-items-pricing" id="orderItems"></div></div><div class="order-total"><span>Total estimado</span><strong id="newOrderTotal">R$ 0,00</strong></div></div><div class="modal-actions"><button class="btn secondary" data-close="orderModal">Cancelar</button><button class="btn primary" id="saveOrderBtn">Salvar pedido</button></div></div></div>
+
+  <div class="modal-backdrop" id="customerModal"><div class="modal small-modal"><div class="modal-head"><div><span class="eyebrow">CADASTRO</span><h3>Novo cliente</h3></div><button class="icon-btn" data-close="customerModal">×</button></div><div class="form-grid"><div class="field full"><label>Nome</label><input id="customerName"></div><div class="field full"><label>Telefone</label><input id="customerPhone"></div><div class="field full"><label>Observação</label><textarea id="customerNotes" rows="3"></textarea></div></div><div class="modal-actions"><button class="btn secondary" data-close="customerModal">Cancelar</button><button class="btn primary" id="saveCustomerBtn">Salvar cliente</button></div></div></div>
+
+  <div class="modal-backdrop" id="paymentModal"><div class="modal small-modal"><div class="modal-head"><div><span class="eyebrow">RECEBIMENTO</span><h3>Lançar pagamento</h3></div><button class="icon-btn" data-close="paymentModal">×</button></div><div class="form-grid"><div class="field full"><label>Cobrança</label><select id="paymentReceivable"></select></div><div class="field"><label>Valor</label><input type="number" min="0" step="0.01" id="paymentAmount"></div><div class="field"><label>Data</label><input type="date" id="paymentDate"></div><div class="field full"><label>Forma</label><input id="paymentMethod" placeholder="Pix, dinheiro, transferência..."></div><div class="field full"><label>Observação</label><textarea id="paymentNotes" rows="2"></textarea></div></div><div class="modal-actions"><button class="btn secondary" data-close="paymentModal">Cancelar</button><button class="btn primary" id="savePaymentBtn">Confirmar pagamento</button></div></div></div>
+
+  <div class="modal-backdrop" id="chargeModal"><div class="modal small-modal"><div class="modal-head"><div><span class="eyebrow">FINANCEIRO</span><h3>Nova cobrança</h3></div><button class="icon-btn" data-close="chargeModal">×</button></div><div class="form-grid"><div class="field full"><label>Cliente — digite ou escolha</label><div class="dual-select"><input id="chargeCustomerText" list="customerOptions" placeholder="Digite o cliente"><span>ou</span><select id="chargeCustomer"></select></div></div><div class="field full"><label>Descrição</label><input id="chargeDescription"></div><div class="field"><label>Valor</label><input type="number" min="0" step="0.01" id="chargeAmount"></div><div class="field"><label>Vencimento</label><input type="date" id="chargeDueDate"></div></div><div class="modal-actions"><button class="btn secondary" data-close="chargeModal">Cancelar</button><button class="btn primary" id="saveChargeBtn">Salvar cobrança</button></div></div></div>
+
+  <div class="modal-backdrop" id="productionModal"><div class="modal"><div class="modal-head"><div><span class="eyebrow">PRODUÇÃO</span><h3>Confirmar produção</h3></div><button class="icon-btn" data-close="productionModal">×</button></div><div id="productionConfirmList"></div><div class="modal-actions"><button class="btn secondary" data-close="productionModal">Cancelar</button><button class="btn primary" id="executeProductionBtn">Confirmar</button></div></div></div>
+
+  <div class="modal-backdrop detail-backdrop" id="productDetailModal"><div class="modal detail-modal"><div class="modal-head sticky-head"><div><span class="eyebrow">DETALHES DO SKU</span><h3 id="productDetailTitle">Produto</h3><p id="productDetailSubtitle" class="modal-subtitle"></p></div><button class="icon-btn" data-close="productDetailModal">×</button></div><div id="productDetailBody" class="detail-body"><div class="empty">Carregando...</div></div></div></div>
+  <div class="modal-backdrop detail-backdrop" id="itemDetailModal"><div class="modal detail-modal"><div class="modal-head sticky-head"><div><span class="eyebrow">ITEM DO PEDIDO</span><h3 id="itemDetailTitle">Item</h3><p id="itemDetailSubtitle" class="modal-subtitle"></p></div><button class="icon-btn" data-close="itemDetailModal">×</button></div><div id="itemDetailBody" class="detail-body"><div class="empty">Carregando...</div></div></div></div>
+  <div class="modal-backdrop detail-backdrop" id="customerDetailModal"><div class="modal detail-modal"><div class="modal-head sticky-head"><div><span class="eyebrow">CLIENTE</span><h3 id="customerDetailTitle">Cliente</h3><p class="modal-subtitle">Cadastro, pedidos e financeiro em um só lugar.</p></div><button class="icon-btn" data-close="customerDetailModal">×</button></div><div id="customerDetailBody" class="detail-body"><div class="empty">Carregando...</div></div></div></div>
+  <div class="modal-backdrop detail-backdrop" id="financeDetailModal"><div class="modal detail-modal"><div class="modal-head sticky-head"><div><span class="eyebrow">COBRANÇA</span><h3 id="financeDetailTitle">Detalhes financeiros</h3></div><button class="icon-btn" data-close="financeDetailModal">×</button></div><div id="financeDetailBody" class="detail-body"><div class="empty">Carregando...</div></div></div></div>
+
+  <script src="/js/v2.js?v=20260910-5" defer></script>
+  <script src="/js/v2-round2.js?v=20260910-3" defer></script>
+  <script>
+    window.addEventListener('DOMContentLoaded',()=>{
+      document.getElementById('managePricesBtn')?.addEventListener('click',()=>location.assign('/precos.html'));
+      document.getElementById('manageProductsBtn')?.addEventListener('click',()=>location.assign('/legacy#produtos'));
+      document.getElementById('openLegacyBtn')?.addEventListener('click',()=>location.assign('/legacy'));
+      document.getElementById('legacyStockLink')?.addEventListener('click',()=>location.assign('/legacy'));
+    });
+  </script>
+</body>
+</html>

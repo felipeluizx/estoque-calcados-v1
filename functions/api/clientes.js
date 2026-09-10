@@ -28,3 +28,23 @@ export async function onRequestPost({ request, env }) {
     return json({ ok: false, error: err.message }, 500);
   }
 }
+
+export async function onRequestPut({ request, env }) {
+  try {
+    if (!(await requireAdmin(request, env))) return unauthorized();
+    const body = await request.json().catch(() => ({}));
+    const id = Number(body.id);
+    const name = String(body.name || "").trim();
+    if (!id) return json({ ok: false, error: "Cliente inválido." }, 400);
+    if (!name) return json({ ok: false, error: "Nome do cliente é obrigatório." }, 400);
+    const exists = await env.DB.prepare(`SELECT id FROM customers WHERE id=?`).bind(id).first();
+    if (!exists) return json({ ok: false, error: "Cliente não encontrado." }, 404);
+    const result = await env.DB.prepare(`
+      UPDATE customers SET name=?, phone=?, notes=?, updated_at=CURRENT_TIMESTAMP WHERE id=?
+      RETURNING id, name, phone, notes, created_at, updated_at
+    `).bind(name, body.phone ? String(body.phone).trim() : null, body.notes ? String(body.notes).trim() : null, id).first();
+    return json({ ok: true, customer: result });
+  } catch (err) {
+    return json({ ok: false, error: err.message }, 500);
+  }
+}

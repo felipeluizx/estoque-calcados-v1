@@ -1,7 +1,12 @@
 export async function onRequest(context) {
-  const response = await context.next();
   const request = context.request;
   const url = new URL(request.url);
+
+  if (request.method === 'GET' && url.pathname === '/') {
+    return Response.redirect(new URL('/v2.html', url.origin).toString(), 302);
+  }
+
+  const response = await context.next();
 
   if (request.method !== 'GET') return response;
 
@@ -13,7 +18,7 @@ export async function onRequest(context) {
   headers.delete('content-length');
   headers.set('cache-control', 'no-cache, no-store, must-revalidate');
 
-  if (['/', '/index.html'].includes(url.pathname)) {
+  if (url.pathname === '/index.html') {
     const script = '<script src="/js/price-admin-bridge.js?v=20260910-2" defer></script>';
     if (!html.includes('/js/price-admin-bridge.js')) {
       html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;

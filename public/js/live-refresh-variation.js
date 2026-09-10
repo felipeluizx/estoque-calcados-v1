@@ -10,8 +10,9 @@
   function productSubLabel(p){
     return [p?.sku,p?.material,p?.grade].filter(Boolean).join(' · ');
   }
+  function setText(el,value){if(el&&el.textContent!==value)el.textContent=value}
 
-  async function refreshNow(btn){
+  async function refreshNow(){
     if(refreshing)return;
     refreshing=true;
     const buttons=$$('.data-refresh-btn,#mobileMenuBtn');
@@ -19,6 +20,7 @@
     try{
       if(typeof loadAll==='function') await loadAll();
       else if(typeof refreshData==='function') await refreshData();
+      enhanceAll();
       if(typeof toast==='function') toast('Dados atualizados.');
     }catch(e){
       if(typeof toast==='function') toast(e?.message||'Não foi possível atualizar.',true);
@@ -31,15 +33,15 @@
   function installRefresh(){
     const mobile=$('#mobileMenuBtn');
     if(mobile){
-      mobile.textContent='↻';
+      setText(mobile,'↻');
       mobile.title='Atualizar dados';
       mobile.setAttribute('aria-label','Atualizar dados');
-      mobile.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();refreshNow(mobile)},true);
+      mobile.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();refreshNow()},true);
     }
     if(!$('.data-refresh-btn')){
       const b=document.createElement('button');
       b.type='button';b.className='data-refresh-btn';b.title='Atualizar dados';b.setAttribute('aria-label','Atualizar dados');b.innerHTML='<span class="refresh-icon">↻</span><span class="refresh-label">Atualizar</span>';
-      b.onclick=()=>refreshNow(b);
+      b.onclick=refreshNow;
       document.body.appendChild(b);
     }
   }
@@ -48,51 +50,45 @@
     $$('#homeProductionList [data-product-id]').forEach(row=>{
       const p=typeof productById==='function'?productById(Number(row.dataset.productId)):null;
       if(!p)return;
-      const title=row.querySelector('.product-title');
-      const meta=row.querySelector('.meta');
-      if(title)title.textContent=productMainLabel(p);
-      if(meta)meta.textContent=productSubLabel(p);
+      setText(row.querySelector('.product-title'),productMainLabel(p));
+      setText(row.querySelector('.meta'),productSubLabel(p));
     });
   }
 
   function enhanceOrders(){
+    const production=(typeof state!=='undefined'&&Array.isArray(state.production))?state.production:[];
     $$('#productionList [data-item-id]').forEach(row=>{
       const id=Number(row.dataset.itemId);
-      const item=(window.state?.production||[]).find(i=>Number(i.order_item_id)===id);
+      const item=production.find(i=>Number(i.order_item_id)===id);
       const p=item&&typeof productById==='function'?productById(item.product_id):null;
       if(!p)return;
-      const title=row.querySelector('.product-title');
-      const firstMeta=row.querySelector('.meta');
-      if(title)title.textContent=productMainLabel(p);
-      if(firstMeta)firstMeta.textContent=productSubLabel(p);
+      setText(row.querySelector('.product-title'),productMainLabel(p));
+      setText(row.querySelector('.meta'),productSubLabel(p));
     });
   }
 
-  function enhanceDetail(){
+  function enhanceItemDetail(){
     const modal=$('#itemDetailModal');
-    if(modal?.classList.contains('show')){
-      const title=$('#itemDetailTitle');
-      const subtitle=$('#itemDetailSubtitle');
-      const body=modal.querySelector('.detail-body');
-      const productSelect=body?.querySelector('#itemProduct');
-      let p=null;
-      if(productSelect?.value&&typeof productById==='function')p=productById(Number(productSelect.value));
-      if(!p){
-        const pid=body?.querySelector('[data-product-id]')?.dataset?.productId;
-        if(pid&&typeof productById==='function')p=productById(Number(pid));
-      }
-      if(p){
-        if(title)title.textContent=productMainLabel(p);
-        if(subtitle)subtitle.textContent=productSubLabel(p);
-      }
-    }
+    if(!modal?.classList.contains('show'))return;
+    const body=modal.querySelector('.detail-body');
+    const productSelect=body?.querySelector('#itemProduct');
+    if(!productSelect?.value||typeof productById!=='function')return;
+    const p=productById(Number(productSelect.value));
+    if(!p)return;
+    setText($('#itemDetailTitle'),productMainLabel(p));
+    setText($('#itemDetailSubtitle'),productSubLabel(p));
   }
 
-  function enhanceAll(){enhanceHome();enhanceOrders();enhanceDetail()}
+  function enhanceAll(){enhanceHome();enhanceOrders();enhanceItemDetail()}
 
-  const observer=new MutationObserver(()=>requestAnimationFrame(enhanceAll));
+  let scheduled=false;
+  const observer=new MutationObserver(()=>{
+    if(scheduled)return;
+    scheduled=true;
+    requestAnimationFrame(()=>{scheduled=false;enhanceAll()});
+  });
   document.addEventListener('DOMContentLoaded',()=>{
     installRefresh();enhanceAll();
-    observer.observe(document.body,{childList:true,subtree:true,characterData:false});
+    observer.observe(document.body,{childList:true,subtree:true});
   });
 })();

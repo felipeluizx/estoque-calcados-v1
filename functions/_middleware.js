@@ -27,9 +27,7 @@ export async function onRequest(context) {
 
   if (isLegacy) {
     const script = '<script src="/js/price-admin-bridge.js?v=20260910-5" defer></script>';
-    if (!html.includes('/js/price-admin-bridge.js')) {
-      html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
-    }
+    if (!html.includes('/js/price-admin-bridge.js')) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
   }
 
   if (isMainApp || isV2Utility) {
@@ -40,9 +38,13 @@ export async function onRequest(context) {
   }
 
   if (isMainApp) {
-    const scripts = '<script src="/js/products-entry.js?v=20260910-3" defer></script><script src="/js/card-customizer.js?v=20260910-2" defer></script>';
-    if (!html.includes('/js/products-entry.js')) html = html.includes('</body>') ? html.replace('</body>', `${scripts}</body>`) : `${html}${scripts}`;
-    else if (!html.includes('/js/card-customizer.js')) html = html.includes('</body>') ? html.replace('</body>', `<script src="/js/card-customizer.js?v=20260910-2" defer></script></body>`) : `${html}<script src="/js/card-customizer.js?v=20260910-2" defer></script>`;
+    const productsScript = '<script src="/js/products-entry.js?v=20260910-3" defer></script>';
+    const cardScript = '<script src="/js/card-customizer.js?v=20260910-3" defer></script>';
+    const compatScript = '<script src="/js/card-compat.js?v=20260910-1" defer></script>';
+    for (const script of [productsScript, cardScript, compatScript]) {
+      const src = script.match(/src="([^"]+)/)?.[1];
+      if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
+    }
   }
 
   if (isV2Utility) {

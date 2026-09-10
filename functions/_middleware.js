@@ -3,7 +3,7 @@ export async function onRequest(context) {
   const url = new URL(request.url);
 
   if (request.method === 'GET' && url.pathname === '/') {
-    return Response.redirect(new URL('/v2.html', url.origin).toString(), 302);
+    return Response.redirect(new URL('/app.html', url.origin).toString(), 302);
   }
 
   if (request.method === 'GET' && (url.pathname === '/legacy' || url.pathname === '/legacy.html')) {

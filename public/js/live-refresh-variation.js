@@ -8,9 +8,18 @@
     return variation ? `${model} · ${variation}` : model;
   }
   function productSubLabel(p){
-    return [p?.sku,p?.material,p?.grade].filter(Boolean).join(' · ');
+    return [p?.material,p?.grade].filter(Boolean).join(' · ');
   }
   function setText(el,value){if(el&&el.textContent!==value)el.textContent=value}
+  function hasNote(item){return Boolean(String(item?.order_notes||'').trim()||String(item?.item_notes||'').trim())}
+  function addNoteDot(container){
+    if(!container||container.querySelector('.note-alert-dot'))return;
+    const dot=document.createElement('span');
+    dot.className='note-alert-dot';
+    dot.title='Este pedido possui observação';
+    dot.setAttribute('aria-label','Pedido com observação');
+    container.appendChild(dot);
+  }
 
   async function refreshNow(){
     if(refreshing)return;
@@ -47,11 +56,22 @@
   }
 
   function enhanceHome(){
+    const production=(typeof state!=='undefined'&&Array.isArray(state.production))?state.production:[];
     $$('#homeProductionList [data-product-id]').forEach(row=>{
-      const p=typeof productById==='function'?productById(Number(row.dataset.productId)):null;
+      const productId=Number(row.dataset.productId);
+      const p=typeof productById==='function'?productById(productId):null;
       if(!p)return;
-      setText(row.querySelector('.product-title'),productMainLabel(p));
-      setText(row.querySelector('.meta'),productSubLabel(p));
+      const active=production.filter(i=>Number(i.product_id)===productId&&Number(i.quantity_remaining)>0);
+      const boxes=active.reduce((sum,i)=>sum+Number(i.quantity_remaining||0),0);
+      const clients=new Set(active.map(i=>Number(i.customer_id))).size;
+      const productBlock=row.firstElementChild;
+      const title=row.querySelector('.product-title');
+      const meta=productBlock?.querySelector('.meta');
+      setText(title,`${boxes} cx · ${productMainLabel(p)}`);
+      const metaParts=[productSubLabel(p),`${clients} cliente${clients===1?'':'s'}`].filter(Boolean);
+      setText(meta,metaParts.join(' · '));
+      if(active.some(hasNote)) addNoteDot(title);
+      row.classList.add('compact-production-row');
     });
   }
 
@@ -62,8 +82,13 @@
       const item=production.find(i=>Number(i.order_item_id)===id);
       const p=item&&typeof productById==='function'?productById(item.product_id):null;
       if(!p)return;
-      setText(row.querySelector('.product-title'),productMainLabel(p));
-      setText(row.querySelector('.meta'),productSubLabel(p));
+      const title=row.querySelector('.product-title');
+      const firstMeta=row.querySelector('div:nth-child(2) .meta')||row.querySelector('.meta');
+      const qty=Number(item.quantity_remaining||0);
+      setText(title,`${qty} cx · ${productMainLabel(p)}`);
+      setText(firstMeta,productSubLabel(p));
+      if(hasNote(item)) addNoteDot(title);
+      row.classList.add('compact-production-row');
     });
   }
 

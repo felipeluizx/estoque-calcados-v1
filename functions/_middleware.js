@@ -66,5 +66,5 @@ export async function onRequest(context) {
     if (!html.includes('/js/theme-sync.js')) html = html.includes('</head>') ? html.replace('</head>', `${script}</head>`) : `${script}${html}`;
   }
 
-  return new Response(html, { status: response.status, statusText: response.status.statusText, headers });
+  return new Response(html, { status: response.status, statusText: response.statusText, headers });
 }

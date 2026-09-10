@@ -2,12 +2,13 @@ const state={products:[],customers:[],production:[],receivables:[],selected:new 
 const $=s=>document.querySelector(s);
 const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
 const today=()=>new Date().toISOString().slice(0,10);
+const adminToken=()=>sessionStorage.getItem('estoque-admin-token')||localStorage.getItem('estoque-admin-token')||'';
 
 function toast(msg,error=false){const el=$('#toast');el.textContent=msg;el.className='toast show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>el.className='toast',3200)}
 function openModal(id){$('#'+id).classList.add('show')}
 function closeModal(id){$('#'+id).classList.remove('show')}
 document.addEventListener('click',e=>{const id=e.target?.dataset?.close;if(id)closeModal(id)});
-async function api(url,opts={}){const r=await fetch(url,{headers:{'content-type':'application/json',...(opts.headers||{})},...opts});const data=await r.json().catch(()=>({}));if(!r.ok||data.ok===false)throw new Error(data.error||'Erro na operação');return data}
+async function api(url,opts={}){const token=adminToken();const headers={'content-type':'application/json',...(token?{authorization:`Bearer ${token}`}:{}),...(opts.headers||{})};const r=await fetch(url,{...opts,headers});const data=await r.json().catch(()=>({}));if(r.status===401)throw new Error('Sua sessão expirou. Entre novamente no sistema antigo e abra a V2.');if(!r.ok||data.ok===false)throw new Error(data.error||'Erro na operação');return data}
 
 async function loadAll(){await Promise.all([loadProducts(),loadCustomers(),loadSummary(),loadProduction(),loadReceivables()]);renderProduction();fillCustomers();fillReceivables()}
 async function loadProducts(){const d=await api('/api/produtos');state.products=d.products||[]}

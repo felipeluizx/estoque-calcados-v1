@@ -1,17 +1,14 @@
-const CACHE_NAME = 'estoque-static-v2';
-const STATIC_SHELL = ['/', '/index.html'];
+const CACHE_NAME = 'estoque-static-v3';
 
 self.addEventListener('install', event => {
   self.skipWaiting();
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_SHELL)));
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    Promise.all([
-      caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))),
-      self.clients.claim(),
-    ])
+    caches.keys()
+      .then(keys => Promise.all(keys.map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
 });
 
@@ -21,17 +18,18 @@ self.addEventListener('fetch', event => {
 
   if (url.pathname.startsWith('/api/')) return;
 
-  // V2 deve sempre buscar a versão mais nova durante o desenvolvimento/preview.
-  if (url.pathname === '/v2.html' || url.pathname.startsWith('/js/v2') || url.pathname.startsWith('/css/v2')) {
+  // HTML e arquivos principais sempre vêm da rede. Isso evita que a V2
+  // substitua o estoque legado ou que uma versão antiga fique presa no cache.
+  const networkOnly =
+    req.mode === 'navigate' ||
+    ['/', '/app.html', '/v2.html', '/index.html', '/legacy', '/legacy.html', '/precos.html'].includes(url.pathname) ||
+    url.pathname.startsWith('/js/v2') ||
+    url.pathname.startsWith('/css/v2');
+
+  if (networkOnly) {
     event.respondWith(fetch(req, { cache: 'no-store' }));
     return;
   }
 
-  event.respondWith(
-    fetch(req).then(res => {
-      const clone = res.clone();
-      caches.open(CACHE_NAME).then(cache => cache.put(req, clone));
-      return res;
-    }).catch(() => caches.match(req))
-  );
+  event.respondWith(fetch(req));
 });

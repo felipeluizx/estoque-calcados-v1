@@ -38,9 +38,9 @@ export async function onRequest(context) {
   }
 
   if (isMainApp) {
-    const gradeCss = '<link rel="stylesheet" href="/css/grade-order.css?v=20260910-1">';
+    const gradeCss = '<link rel="stylesheet" href="/css/grade-order.css?v=20260910-2">';
     const refreshCss = '<link rel="stylesheet" href="/css/live-refresh-variation.css?v=20260910-3">';
-    const compactCss = '<link rel="stylesheet" href="/css/compact-details.css?v=20260910-1">';
+    const compactCss = '<link rel="stylesheet" href="/css/compact-details.css?v=20260910-2">';
     for (const css of [gradeCss, refreshCss, compactCss]) {
       const href = css.match(/href="([^"]+)/)?.[1];
       if (href && !html.includes(href)) html = html.includes('</head>') ? html.replace('</head>', `${css}</head>`) : `${css}${html}`;
@@ -49,10 +49,10 @@ export async function onRequest(context) {
     const productsScript = '<script src="/js/products-entry.js?v=20260910-3" defer></script>';
     const cardScript = '<script src="/js/card-customizer.js?v=20260910-4" defer></script>';
     const compatScript = '<script src="/js/card-compat.js?v=20260910-1" defer></script>';
-    const gradeScript = '<script src="/js/grade-order.js?v=20260910-1" defer></script>';
-    const refreshScript = '<script src="/js/live-refresh-variation.js?v=20260910-4" defer></script>';
+    const gradeScript = '<script src="/js/grade-order.js?v=20260910-2" defer></script>';
+    const refreshScript = '<script src="/js/live-refresh-variation.js?v=20260910-5" defer></script>';
     const deleteScript = '<script src="/js/delete-controls.js?v=20260910-1" defer></script>';
-    const compactScript = '<script src="/js/compact-details.js?v=20260910-1" defer></script>';
+    const compactScript = '<script src="/js/compact-details.js?v=20260910-2" defer></script>';
     for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript]) {
       const src = script.match(/src="([^"]+)/)?.[1];
       if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;

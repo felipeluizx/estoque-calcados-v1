@@ -42,7 +42,8 @@ export async function onRequest(context) {
     const refreshCss = '<link rel="stylesheet" href="/css/live-refresh-variation.css?v=20260910-3">';
     const compactCss = '<link rel="stylesheet" href="/css/compact-details.css?v=20260910-2">';
     const groupingCss = '<link rel="stylesheet" href="/css/order-grouping.css?v=20260910-1">';
-    for (const css of [gradeCss, refreshCss, compactCss, groupingCss]) {
+    const mobileUxCss = '<link rel="stylesheet" href="/css/mobile-ux-hardening.css?v=20260910-2">';
+    for (const css of [gradeCss, refreshCss, compactCss, groupingCss, mobileUxCss]) {
       const href = css.match(/href="([^"]+)/)?.[1];
       if (href && !html.includes(href)) html = html.includes('</head>') ? html.replace('</head>', `${css}</head>`) : `${css}${html}`;
     }
@@ -55,7 +56,8 @@ export async function onRequest(context) {
     const deleteScript = '<script src="/js/delete-controls.js?v=20260910-1" defer></script>';
     const compactScript = '<script src="/js/compact-details.js?v=20260910-2" defer></script>';
     const groupingScript = '<script src="/js/order-grouping.js?v=20260910-1" defer></script>';
-    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript]) {
+    const mobileUxScript = '<script src="/js/mobile-ux-hardening.js?v=20260910-1" defer></script>';
+    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript]) {
       const src = script.match(/src="([^"]+)/)?.[1];
       if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
     }

@@ -6,8 +6,24 @@ export async function onRequest(context) {
     return Response.redirect(new URL('/v2.html', url.origin).toString(), 302);
   }
 
-  const response = await context.next();
+  if (request.method === 'GET' && (url.pathname === '/legacy' || url.pathname === '/legacy.html')) {
+    const legacyUrl = new URL('/index.html', url.origin);
+    const legacyRequest = new Request(legacyUrl.toString(), request);
+    const legacyResponse = await context.next(legacyRequest);
+    const contentType = legacyResponse.headers.get('content-type') || '';
+    if (!contentType.includes('text/html')) return legacyResponse;
+    let html = await legacyResponse.text();
+    const script = '<script src="/js/price-admin-bridge.js?v=20260910-4" defer></script>';
+    if (!html.includes('/js/price-admin-bridge.js')) {
+      html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
+    }
+    const headers = new Headers(legacyResponse.headers);
+    headers.delete('content-length');
+    headers.set('cache-control', 'no-cache, no-store, must-revalidate');
+    return new Response(html, { status: 200, headers });
+  }
 
+  const response = await context.next();
   if (request.method !== 'GET') return response;
 
   const contentType = response.headers.get('content-type') || '';
@@ -18,17 +34,10 @@ export async function onRequest(context) {
   headers.delete('content-length');
   headers.set('cache-control', 'no-cache, no-store, must-revalidate');
 
-  if (url.pathname === '/index.html' || url.pathname === '/legacy') {
-    const script = '<script src="/js/price-admin-bridge.js?v=20260910-3" defer></script>';
+  if (url.pathname === '/index.html') {
+    const script = '<script src="/js/price-admin-bridge.js?v=20260910-4" defer></script>';
     if (!html.includes('/js/price-admin-bridge.js')) {
       html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
-    }
-  }
-
-  if (url.pathname === '/v2.html') {
-    const scripts = '<script src="/js/v2-official-fix.js?v=20260910-2" defer></script><script src="/js/v2-round2.js?v=20260910-1" defer></script>';
-    if (!html.includes('/js/v2-round2.js')) {
-      html = html.includes('</body>') ? html.replace('</body>', `${scripts}</body>`) : `${html}${scripts}`;
     }
   }
 

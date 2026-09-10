@@ -38,10 +38,13 @@ export async function onRequest(context) {
   }
 
   if (isMainApp) {
+    const gradeCss = '<link rel="stylesheet" href="/css/grade-order.css?v=20260910-1">';
+    if (!html.includes('/css/grade-order.css')) html = html.includes('</head>') ? html.replace('</head>', `${gradeCss}</head>`) : `${gradeCss}${html}`;
     const productsScript = '<script src="/js/products-entry.js?v=20260910-3" defer></script>';
     const cardScript = '<script src="/js/card-customizer.js?v=20260910-3" defer></script>';
     const compatScript = '<script src="/js/card-compat.js?v=20260910-1" defer></script>';
-    for (const script of [productsScript, cardScript, compatScript]) {
+    const gradeScript = '<script src="/js/grade-order.js?v=20260910-1" defer></script>';
+    for (const script of [productsScript, cardScript, compatScript, gradeScript]) {
       const src = script.match(/src="([^"]+)/)?.[1];
       if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
     }

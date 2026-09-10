@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0a0b0d">
+  <title>Produtos · Estoque Calçados</title>
+  <link rel="stylesheet" href="/css/v2.css?v=20260910-5">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    .products-shell{max-width:1500px;margin:0 auto;padding:34px}.products-top{display:flex;gap:18px;align-items:flex-start;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap}.products-actions{display:flex;gap:10px;flex-wrap:wrap}.products-toolbar{display:grid;grid-template-columns:minmax(240px,1fr) repeat(3,minmax(140px,220px));gap:10px;margin-bottom:14px}.products-bulk{display:flex;gap:10px;align-items:end;flex-wrap:wrap;padding:16px;margin-bottom:14px}.products-bulk label{display:grid;gap:6px;min-width:180px}.products-table-wrap{overflow:auto}.products-table{width:100%;border-collapse:collapse;min-width:1050px}.products-table th,.products-table td{padding:13px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}.products-table th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);position:sticky;top:0;background:var(--panel);z-index:2}.products-table input[type=text],.products-table input[type=number]{width:100%;min-width:90px}.price-input{max-width:120px}.sku-input{max-width:150px}.row-actions{display:flex;gap:7px}.row-actions button{white-space:nowrap}.selection-info{font-size:13px;color:var(--muted)}.product-status{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px}.price-missing{background:rgba(234,179,8,.12);color:#eab308}.price-ok{background:rgba(34,197,94,.12);color:#22c55e}.modal-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.modal-form-grid .span2{grid-column:span 2}.bulk-grid{display:grid;gap:9px}.bulk-row{display:grid;grid-template-columns:1.1fr .8fr 1fr 1fr .8fr auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--border);border-radius:12px}.bulk-row label{display:grid;gap:5px;font-size:12px;color:var(--muted)}.back-link{display:inline-flex;align-items:center;gap:7px;color:var(--muted);text-decoration:none;margin-bottom:16px}.back-link:hover{color:var(--text)}@media(max-width:900px){.products-shell{padding:18px}.products-toolbar{grid-template-columns:1fr 1fr}.bulk-row{grid-template-columns:1fr 1fr}.bulk-row .remove-bulk{grid-column:span 2}.modal-form-grid{grid-template-columns:1fr}.modal-form-grid .span2{grid-column:auto}}@media(max-width:560px){.products-toolbar{grid-template-columns:1fr}.products-actions>.btn{flex:1}.products-bulk>*{width:100%}.products-bulk label{min-width:0}.bulk-row{grid-template-columns:1fr}.bulk-row .remove-bulk{grid-column:auto}}
+  </style>
+</head>
+<body>
+  <main class="products-shell">
+    <a class="back-link" href="/app.html#settings">← Voltar aos Ajustes</a>
+    <div class="products-top">
+      <div><p class="eyebrow">SISTEMA · CATÁLOGO KV</p><h1>Produtos e preços-base</h1><p class="lead">Cadastre e gerencie os mesmos produtos usados em pedidos, produção e estoque.</p></div>
+      <div class="products-actions"><button class="btn secondary" id="bulkAddBtn">Cadastro em massa</button><button class="btn primary" id="newProductBtn">+ Novo produto</button></div>
+    </div>
+
+    <section class="panel products-bulk">
+      <label><span>Preço para selecionados</span><input id="bulkPrice" type="number" min="0" step="0.01" placeholder="Ex.: 89,90"></label>
+      <button class="btn secondary" id="applyBulkPriceBtn">Aplicar aos selecionados</button>
+      <button class="btn primary" id="saveAllBtn">Salvar alterações</button>
+      <button class="btn secondary" id="printSelectedBtn">Imprimir selecionados</button>
+      <span class="selection-info" id="selectionInfo">0 selecionados</span>
+    </section>
+
+    <div class="products-toolbar">
+      <div class="searchbox">⌕<input id="productSearch" placeholder="Buscar SKU, modelo, material, cor..."></div>
+      <select id="modelFilter"><option value="">Todos os modelos</option></select>
+      <select id="gradeFilter"><option value="">Todas as grades</option></select>
+      <select id="priceFilter"><option value="">Todos os preços</option><option value="missing">Sem preço</option><option value="filled">Com preço</option></select>
+    </div>
+
+    <section class="panel products-table-wrap">
+      <table class="products-table">
+        <thead><tr><th><input id="selectAll" type="checkbox"></th><th>ID</th><th>SKU</th><th>Modelo</th><th>Grade</th><th>Material</th><th>Variação/Cor</th><th>Preço-base</th><th></th></tr></thead>
+        <tbody id="productsBody"><tr><td colspan="9" class="empty">Carregando produtos...</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="modal-backdrop" id="productModal"><div class="modal small-modal"><div class="modal-head"><div><span class="eyebrow">PRODUTO</span><h3 id="productModalTitle">Novo produto</h3></div><button class="icon-btn" data-close="productModal">×</button></div><div class="modal-form-grid"><label class="field"><span>SKU</span><input id="pmSku"></label><label class="field"><span>Modelo</span><input id="pmModelo" required></label><label class="field"><span>Grade</span><input id="pmGrade" required></label><label class="field"><span>Material</span><input id="pmMaterial" required></label><label class="field span2"><span>Variação / Cor</span><input id="pmVariacao" required></label><label class="field span2"><span>Preço-base</span><input id="pmPrice" type="number" min="0" step="0.01"></label></div><div class="modal-actions"><button class="btn secondary" data-close="productModal">Cancelar</button><button class="btn primary" id="saveProductBtn">Salvar produto</button></div></div></div>
+
+  <div class="modal-backdrop" id="bulkModal"><div class="modal wide-modal"><div class="modal-head"><div><span class="eyebrow">CADASTRO EM MASSA</span><h3>Adicionar vários produtos</h3><p class="modal-subtitle">Cada linha vira um produto. Use duplicar para acelerar combinações.</p></div><button class="icon-btn" data-close="bulkModal">×</button></div><div id="bulkRows" class="bulk-grid"></div><div class="detail-actions"><button class="btn secondary small" id="addBulkRowBtn">+ Adicionar linha</button></div><div class="modal-actions"><button class="btn secondary" data-close="bulkModal">Cancelar</button><button class="btn primary" id="saveBulkBtn">Cadastrar produtos</button></div></div></div>
+
+  <script>
+  (()=>{
+    const token=()=>sessionStorage.getItem('estoque-admin-token')||localStorage.getItem('estoque-admin-token')||'';
+    const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+    const esc=s=>String(s??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    const money=v=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(v||0));
+    let products=[], prices=new Map(), selected=new Set(), editingId=null, labelTemplates=[];
+    function toast(msg,error=false){const e=$('#toast');e.textContent=msg;e.className='toast show'+(error?' error':'');clearTimeout(toast.t);toast.t=setTimeout(()=>e.className='toast',3200)}
+    function openModal(id){$('#'+id).classList.add('show')} function closeModal(id){$('#'+id).classList.remove('show')}
+    document.addEventListener('click',e=>{const id=e.target.dataset?.close;if(id)closeModal(id)});
+    async function api(url,opts={}){const r=await fetch(url,{...opts,headers:{'content-type':'application/json',...(token()?{authorization:`Bearer ${token()}`}:{}) ,...(opts.headers||{})},cache:'no-store'});const d=await r.json().catch(()=>({}));if(r.status===401){location.href='/app.html';throw new Error('Sessão expirada.')}if(!r.ok||d.ok===false)throw new Error(d.error||`Erro ${r.status}`);return d}
+    function nextId(){return products.length?Math.max(...products.map(p=>Number(p.id)||0))+1:1}
+    function normalized(p){return {id:Number(p.id),sku:String(p.sku||'').trim(),modelo:String(p.modelo||'').trim(),grade:String(p.grade||'').trim(),material:String(p.material||'').trim(),variacao:String(p.variacao||'').trim()}}
+    async function load(){try{const [pd,pr]=await Promise.all([api('/api/produtos'),api('/api/precos')]);products=(pd.products||[]).map(p=>({...p}));labelTemplates=pd.labelTemplates||[];prices=new Map((pr.prices||[]).map(x=>[Number(x.product_id),x.base_price==null?null:Number(x.base_price)]));fillFilters();render()}catch(e){toast(e.message,true)}}
+    function fillFilters(){const keepM=$('#modelFilter').value,keepG=$('#gradeFilter').value;const models=[...new Set(products.map(p=>p.modelo).filter(Boolean))].sort();const grades=[...new Set(products.map(p=>p.grade).filter(Boolean))].sort();$('#modelFilter').innerHTML='<option value="">Todos os modelos</option>'+models.map(x=>`<option ${x===keepM?'selected':''}>${esc(x)}</option>`).join('');$('#gradeFilter').innerHTML='<option value="">Todas as grades</option>'+grades.map(x=>`<option ${x===keepG?'selected':''}>${esc(x)}</option>`).join('')}
+    function filtered(){const q=$('#productSearch').value.trim().toLowerCase(),m=$('#modelFilter').value,g=$('#gradeFilter').value,pf=$('#priceFilter').value;return products.filter(p=>{const hay=[p.id,p.sku,p.modelo,p.grade,p.material,p.variacao].join(' ').toLowerCase();const price=prices.get(Number(p.id));return(!q||hay.includes(q))&&(!m||p.modelo===m)&&(!g||p.grade===g)&&(!pf||(pf==='missing'?price==null:price!=null))})}
+    function render(){const rows=filtered();$('#productsBody').innerHTML=rows.length?rows.map(p=>{const price=prices.get(Number(p.id));return `<tr data-id="${p.id}"><td><input class="row-select" type="checkbox" ${selected.has(Number(p.id))?'checked':''}></td><td><strong>${p.id}</strong></td><td><input class="sku-input row-sku" type="text" value="${esc(p.sku||'')}"></td><td><input class="row-modelo" type="text" value="${esc(p.modelo||'')}"></td><td><input class="row-grade" type="text" value="${esc(p.grade||'')}"></td><td><input class="row-material" type="text" value="${esc(p.material||'')}"></td><td><input class="row-variacao" type="text" value="${esc(p.variacao||'')}"></td><td><input class="price-input row-price" type="number" min="0" step="0.01" value="${price??''}" placeholder="—"><div class="product-status ${price==null?'price-missing':'price-ok'}">${price==null?'sem preço':money(price)}</div></td><td><div class="row-actions"><button class="btn secondary small edit-row">Abrir</button></div></td></tr>`}).join(''):'<tr><td colspan="9" class="empty">Nenhum produto encontrado.</td></tr>';bindRows();updateSelectionInfo()}
+    function bindRows(){$$('#productsBody tr[data-id]').forEach(tr=>{const id=Number(tr.dataset.id),p=products.find(x=>Number(x.id)===id);tr.querySelector('.row-select').onchange=e=>{e.target.checked?selected.add(id):selected.delete(id);updateSelectionInfo()};[['row-sku','sku'],['row-modelo','modelo'],['row-grade','grade'],['row-material','material'],['row-variacao','variacao']].forEach(([cls,key])=>tr.querySelector('.'+cls).oninput=e=>p[key]=e.target.value);tr.querySelector('.row-price').oninput=e=>prices.set(id,e.target.value===''?null:Number(e.target.value));tr.querySelector('.edit-row').onclick=()=>openEdit(id)})}
+    function updateSelectionInfo(){$('#selectionInfo').textContent=`${selected.size} selecionado${selected.size===1?'':'s'}`;const visible=filtered();$('#selectAll').checked=visible.length>0&&visible.every(p=>selected.has(Number(p.id)))}
+    async function saveCatalog(){const clean=products.map(p=>({...p,...normalized(p)}));if(clean.some(p=>!p.modelo||!p.grade||!p.material||!p.variacao))throw new Error('Modelo, grade, material e variação são obrigatórios.');await api('/api/produtos',{method:'POST',body:JSON.stringify({products:clean,labelTemplates})});products=clean}
+    async function savePrices(ids=null){const target=(ids||products.map(p=>Number(p.id))).map(id=>({product_id:Number(id),base_price:prices.get(Number(id))}));await api('/api/precos',{method:'PUT',body:JSON.stringify({prices:target})})}
+    $('#saveAllBtn').onclick=async()=>{const b=$('#saveAllBtn');try{b.disabled=true;await saveCatalog();await savePrices();toast('Produtos e preços salvos.');fillFilters();render()}catch(e){toast(e.message,true)}finally{b.disabled=false}};
+    $('#applyBulkPriceBtn').onclick=()=>{const value=$('#bulkPrice').value;if(!selected.size)return toast('Selecione pelo menos um produto.',true);if(value==='')return toast('Informe um preço.',true);selected.forEach(id=>prices.set(id,Number(value)));render();toast(`Preço aplicado a ${selected.size} produto(s). Clique em Salvar alterações.`)};
+    $('#selectAll').onchange=e=>{filtered().forEach(p=>e.target.checked?selected.add(Number(p.id)):selected.delete(Number(p.id)));render()};
+    ['productSearch','modelFilter','gradeFilter','priceFilter'].forEach(id=>$('#'+id).addEventListener(id==='productSearch'?'input':'change',render));
+    function resetProductModal(){editingId=null;$('#productModalTitle').textContent='Novo produto';['pmSku','pmModelo','pmGrade','pmMaterial','pmVariacao','pmPrice'].forEach(id=>$('#'+id).value='')}
+    $('#newProductBtn').onclick=()=>{resetProductModal();openModal('productModal')};
+    function openEdit(id){const p=products.find(x=>Number(x.id)===id);if(!p)return;editingId=id;$('#productModalTitle').textContent=`Editar produto #${id}`;$('#pmSku').value=p.sku||'';$('#pmModelo').value=p.modelo||'';$('#pmGrade').value=p.grade||'';$('#pmMaterial').value=p.material||'';$('#pmVariacao').value=p.variacao||'';$('#pmPrice').value=prices.get(id)??'';openModal('productModal')}
+    $('#saveProductBtn').onclick=async()=>{const b=$('#saveProductBtn');try{const vals={sku:$('#pmSku').value.trim(),modelo:$('#pmModelo').value.trim(),grade:$('#pmGrade').value.trim(),material:$('#pmMaterial').value.trim(),variacao:$('#pmVariacao').value.trim()};if(!vals.modelo||!vals.grade||!vals.material||!vals.variacao)throw new Error('Preencha modelo, grade, material e variação.');const id=editingId||nextId();if(editingId){Object.assign(products.find(p=>Number(p.id)===id),vals)}else products.push({id,...vals});prices.set(id,$('#pmPrice').value===''?null:Number($('#pmPrice').value));b.disabled=true;await saveCatalog();await savePrices([id]);closeModal('productModal');fillFilters();render();toast(editingId?'Produto atualizado.':'Produto cadastrado.')}catch(e){toast(e.message,true)}finally{b.disabled=false}};
+    function bulkRowHtml(i,base={}){return `<div class="bulk-row" data-index="${i}"><label>SKU<input class="b-sku" value="${esc(base.sku||'')}"></label><label>Modelo<input class="b-modelo" value="${esc(base.modelo||'')}"></label><label>Grade<input class="b-grade" value="${esc(base.grade||'')}"></label><label>Material<input class="b-material" value="${esc(base.material||'')}"></label><label>Variação/Cor<input class="b-variacao" value="${esc(base.variacao||'')}"></label><button class="btn secondary small remove-bulk">Remover</button></div>`}
+    function addBulkRow(base={}){const i=$$('#bulkRows .bulk-row').length;$('#bulkRows').insertAdjacentHTML('beforeend',bulkRowHtml(i,base));bindBulkRows()}
+    function bindBulkRows(){$$('#bulkRows .remove-bulk').forEach(b=>b.onclick=()=>b.closest('.bulk-row').remove())}
+    $('#bulkAddBtn').onclick=()=>{$('#bulkRows').innerHTML='';addBulkRow();openModal('bulkModal')};$('#addBulkRowBtn').onclick=()=>{const last=$$('#bulkRows .bulk-row').at(-1);const base=last?{sku:last.querySelector('.b-sku').value,modelo:last.querySelector('.b-modelo').value,grade:last.querySelector('.b-grade').value,material:last.querySelector('.b-material').value,variacao:''}:{};addBulkRow(base)};
+    $('#saveBulkBtn').onclick=async()=>{const b=$('#saveBulkBtn');try{const rows=$$('#bulkRows .bulk-row').map(r=>({sku:r.querySelector('.b-sku').value.trim(),modelo:r.querySelector('.b-modelo').value.trim(),grade:r.querySelector('.b-grade').value.trim(),material:r.querySelector('.b-material').value.trim(),variacao:r.querySelector('.b-variacao').value.trim()})).filter(r=>Object.values(r).some(Boolean));if(!rows.length)throw new Error('Adicione pelo menos um produto.');if(rows.some(r=>!r.modelo||!r.grade||!r.material||!r.variacao))throw new Error('Preencha modelo, grade, material e variação em todas as linhas.');let id=nextId();rows.forEach(r=>products.push({id:id++,...r}));b.disabled=true;await saveCatalog();closeModal('bulkModal');fillFilters();render();toast(`${rows.length} produto(s) cadastrados.`)}catch(e){toast(e.message,true)}finally{b.disabled=false}};
+    $('#printSelectedBtn').onclick=()=>{if(!selected.size)return toast('Selecione os produtos que deseja imprimir.',true);const list=products.filter(p=>selected.has(Number(p.id)));const w=window.open('','_blank');if(!w)return toast('O navegador bloqueou a janela de impressão.',true);w.document.write(`<html><head><title>Produtos</title><style>body{font-family:Arial;padding:20px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{border:1px solid #ccc;padding:14px;page-break-inside:avoid}.sku{font-size:22px;font-weight:bold}.meta{font-size:13px;color:#444;margin-top:5px}@media print{button{display:none}}</style></head><body><button onclick="window.print()">Imprimir</button><div class="grid">${list.map(p=>`<div class="card"><div class="sku">${esc(p.sku||('#'+p.id))}</div><strong>${esc(p.modelo)}</strong><div class="meta">${esc(p.grade)} · ${esc(p.material)} · ${esc(p.variacao)}</div><div class="meta">ID ${p.id}${prices.get(Number(p.id))!=null?' · '+money(prices.get(Number(p.id))):''}</div></div>`).join('')}</div></body></html>`);w.document.close()};
+    if(!token()){location.replace('/app.html')}else load();
+  })();
+  </script>
+</body>
+</html>

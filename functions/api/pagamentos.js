@@ -1,10 +1,13 @@
+import { requireAdmin, unauthorized } from "../lib/admin-auth.js";
+
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
   headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" }
 });
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
   try {
+    if (!(await requireAdmin(request, env))) return unauthorized();
     const { results } = await env.DB.prepare(`
       SELECT
         r.id,
@@ -48,27 +51,21 @@ export async function onRequestGet({ env }) {
 
 export async function onRequestPost({ request, env }) {
   try {
+    if (!(await requireAdmin(request, env))) return unauthorized();
     const body = await request.json().catch(() => ({}));
     const receivableId = Number(body.receivable_id);
     const amount = Number(body.amount);
-    if (!receivableId || amount <= 0) {
-      return json({ ok: false, error: "Cobrança e valor são obrigatórios." }, 400);
-    }
+    if (!receivableId || amount <= 0) return json({ ok: false, error: "Cobrança e valor são obrigatórios." }, 400);
 
     const rec = await env.DB.prepare(`
-      SELECT
-        r.id, r.amount, r.adjustment,
+      SELECT r.id, r.amount, r.adjustment,
         COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.receivable_id = r.id), 0) AS amount_paid
-      FROM receivables r
-      WHERE r.id = ?
+      FROM receivables r WHERE r.id = ?
     `).bind(receivableId).first();
-
     if (!rec) return json({ ok: false, error: "Cobrança não encontrada." }, 404);
 
     const remaining = Math.max(Number(rec.amount) - Number(rec.adjustment || 0) - Number(rec.amount_paid || 0), 0);
-    if (amount > remaining) {
-      return json({ ok: false, error: `Valor maior que o saldo pendente (R$ ${remaining.toFixed(2)}).` }, 400);
-    }
+    if (amount > remaining) return json({ ok: false, error: `Valor maior que o saldo pendente (R$ ${remaining.toFixed(2)}).` }, 400);
 
     const payment = await env.DB.prepare(`
       INSERT INTO payments (receivable_id, amount, payment_date, method, notes)

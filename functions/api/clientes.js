@@ -1,7 +1,10 @@
+import { requireAdmin, unauthorized } from "../lib/admin-auth.js";
+
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
   try {
+    if (!(await requireAdmin(request, env))) return unauthorized();
     const { results } = await env.DB.prepare(`SELECT id, name, phone, notes, created_at, updated_at FROM customers ORDER BY name COLLATE NOCASE`).all();
     return json({ ok: true, customers: results || [] });
   } catch (err) {
@@ -11,6 +14,7 @@ export async function onRequestGet({ env }) {
 
 export async function onRequestPost({ request, env }) {
   try {
+    if (!(await requireAdmin(request, env))) return unauthorized();
     const body = await request.json().catch(() => ({}));
     const name = String(body.name || "").trim();
     const phone = body.phone ? String(body.phone).trim() : null;

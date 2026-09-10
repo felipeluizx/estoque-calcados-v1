@@ -46,6 +46,13 @@ export async function onRequest(context) {
     }
   }
 
+  if (isV2Utility) {
+    const script = '<script src="/js/theme-sync.js?v=20260910-1"></script>';
+    if (!html.includes('/js/theme-sync.js')) {
+      html = html.includes('</head>') ? html.replace('</head>', `${script}</head>`) : `${script}${html}`;
+    }
+  }
+
   return new Response(html, {
     status: response.status,
     statusText: response.statusText,

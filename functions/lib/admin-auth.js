@@ -1,3 +1,5 @@
+const SESSION_PREFIX = "admin-session:";
+
 function fromBase64Url(value) {
   const normalized = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
@@ -7,24 +9,37 @@ function fromBase64Url(value) {
   return bytes;
 }
 
-async function verifyToken(secret, token) {
-  const parts = String(token || "").split(".");
-  if (parts.length !== 2) return false;
-  const [body, signature] = parts;
-  const enc = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["verify"]
-  );
-  const valid = await crypto.subtle.verify("HMAC", key, fromBase64Url(signature), enc.encode(body));
-  if (!valid) return false;
+async function verifySignedToken(secret, token) {
+  try {
+    const parts = String(token || "").split(".");
+    if (parts.length !== 2) return false;
+    const [body, signature] = parts;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    const valid = await crypto.subtle.verify("HMAC", key, fromBase64Url(signature), enc.encode(body));
+    if (!valid) return false;
+    const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(body)));
+    const now = Math.floor(Date.now() / 1000);
+    return Boolean(payload?.exp && Number(payload.exp) > now && payload?.v === 3);
+  } catch {
+    return false;
+  }
+}
 
-  const payload = JSON.parse(new TextDecoder().decode(fromBase64Url(body)));
-  const now = Math.floor(Date.now() / 1000);
-  return Boolean(payload?.exp && Number(payload.exp) > now && payload?.v === 3);
+async function verifyLegacyKvSession(env, token) {
+  try {
+    const kv = env?.KV_BINDING || env?.ESTOQUE_DB;
+    if (!kv || typeof kv.get !== "function") return false;
+    return Boolean(await kv.get(`${SESSION_PREFIX}${token}`));
+  } catch {
+    return false;
+  }
 }
 
 export async function requireAdmin(request, env) {
@@ -32,9 +47,13 @@ export async function requireAdmin(request, env) {
     const authHeader = request.headers.get("authorization") || "";
     if (!authHeader.toLowerCase().startsWith("bearer ")) return false;
     const token = authHeader.slice(7).trim();
+    if (!token) return false;
+
     const secret = env?.ADMIN_PASSWORD;
-    if (!token || !secret) return false;
-    return await verifyToken(secret, token);
+    if (secret && await verifySignedToken(secret, token)) return true;
+
+    // Transição segura: aceita tokens UUID antigos enquanto ainda existirem no KV.
+    return await verifyLegacyKvSession(env, token);
   } catch {
     return false;
   }

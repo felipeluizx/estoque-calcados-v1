@@ -51,7 +51,7 @@ export async function onRequest(context) {
     const gradeCss = '<link rel="stylesheet" href="/css/grade-order.css?v=20260910-4">';
     const refreshCss = '<link rel="stylesheet" href="/css/live-refresh-variation.css?v=20260910-3">';
     const compactCss = '<link rel="stylesheet" href="/css/compact-details.css?v=20260910-3">';
-    const groupingCss = '<link rel="stylesheet" href="/css/order-grouping.css?v=20260910-2">';
+    const groupingCss = '<link rel="stylesheet" href="/css/order-grouping.css?v=20260910-3">';
     const mobileUxCss = '<link rel="stylesheet" href="/css/mobile-ux-hardening.css?v=20260910-2">';
     const denseCss = '<link rel="stylesheet" href="/css/dense-customers-finance.css?v=20260910-1">';
     for (const css of [gradeCss, refreshCss, compactCss, groupingCss, mobileUxCss, denseCss]) {
@@ -66,7 +66,7 @@ export async function onRequest(context) {
     const refreshScript = '<script src="/js/live-refresh-variation.js?v=20260910-5" defer></script>';
     const deleteScript = '<script src="/js/delete-controls.js?v=20260910-1" defer></script>';
     const compactScript = '<script src="/js/compact-details.js?v=20260910-3" defer></script>';
-    const groupingScript = '<script src="/js/order-grouping.js?v=20260910-3" defer></script>';
+    const groupingScript = '<script src="/js/order-grouping.js?v=20260910-4" defer></script>';
     const mobileUxScript = '<script src="/js/mobile-ux-hardening.js?v=20260910-1" defer></script>';
     const denseScript = '<script src="/js/dense-customers-finance.js?v=20260910-1" defer></script>';
     const pwaScript = '<script src="/js/pwa-install.js?v=20260910-1" defer></script>';

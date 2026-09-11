@@ -1,9 +1,22 @@
 {
+  "id": "/app",
   "name": "Estoque Calçados",
   "short_name": "Estoque",
-  "start_url": "/",
+  "description": "Pedidos, produção, clientes e financeiro da fábrica.",
+  "start_url": "/app",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#f0f2f5",
-  "theme_color": "#1d4ed8",
-  "icons": []
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }

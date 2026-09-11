@@ -71,7 +71,7 @@
     }
     if(mode==='sku'){
       const p=productById(item.product_id),rows=activeSkuRows(item.product_id),boxes=rows.reduce((s,x)=>s+Number(x.quantity_remaining||0),0),customers=new Set(rows.map(x=>x.customer_id)).size,orders=new Set(rows.map(x=>x.order_id)).size;
-      return {key:`s:${item.product_id}`,title:mainProduct(p),sub:`${boxes} CX pendentes · ${customers} cliente${customers===1?'':'s'} · ${orders} pedido${orders===1?'':'s'}`,sku:true};
+      return {key:`s:${item.product_id}`,title:mainProduct(p),sub:`${customers} cliente${customers===1?'':'s'} · ${orders} pedido${orders===1?'':'s'}`,boxes,sku:true};
     }
     return {key:`o:${item.order_id}`,title:`Pedido #${item.order_id}`,sub:[item.customer_name,item.order_date?dateBR(item.order_date):''].filter(Boolean).join(' · ')};
   }
@@ -93,7 +93,12 @@
     const frag=document.createDocumentFragment();
     for(const g of groups.values()){
       const sec=document.createElement('section');sec.className='order-group'+(g.sku?' order-group-sku':'');sec.dataset.groupKey=g.key;
-      const head=document.createElement('div');head.className='order-group-head';head.innerHTML=`<div><strong>${esc(g.title)}</strong><span>${esc(g.sub||'')}</span></div><span class="order-group-count">${g.rows.length} ${g.rows.length===1?'linha':'linhas'}</span>`;
+      const head=document.createElement('div');head.className='order-group-head';
+      if(g.sku){
+        head.innerHTML=`<div class="sku-group-main"><div class="sku-group-qty"><strong>${Number(g.boxes||0)}</strong><span>CX</span></div><div class="sku-group-copy"><strong>${esc(g.title)}</strong><span>${esc(g.sub||'')}</span></div></div><span class="order-group-count">${g.rows.length} ${g.rows.length===1?'linha':'linhas'}</span>`;
+      }else{
+        head.innerHTML=`<div><strong>${esc(g.title)}</strong><span>${esc(g.sub||'')}</span></div><span class="order-group-count">${g.rows.length} ${g.rows.length===1?'linha':'linhas'}</span>`;
+      }
       sec.appendChild(head);g.rows.forEach(r=>sec.appendChild(r));frag.appendChild(sec);
     }
     list.replaceChildren(frag);

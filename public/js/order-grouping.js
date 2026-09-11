@@ -20,6 +20,7 @@
   function mainProduct(p){return uniqueParts([p?.modelo||p?.sku||'Produto',p?.variacao,p?.grade]).join(' · ')}
   function modelName(p){return norm(p?.modelo)||norm(p?.sku)||'Produto'}
   function gradeName(p){return norm(p?.grade)||'Sem grade'}
+  function variationName(p){return uniqueParts([p?.variacao,p?.material,p?.sku]).join(' · ')||norm(p?.sku)||'Variação'}
   function hasNote(i){return Boolean(norm(i?.order_notes)||norm(i?.item_notes))}
   function itemByRow(row){const id=Number(row.dataset.itemId);return (state.production||[]).find(i=>Number(i.order_item_id)===id)}
   function saveView(){localStorage.setItem(PREF,JSON.stringify(view))}
@@ -73,16 +74,33 @@
     return {key:`o:${item.order_id}`,title:`Pedido #${item.order_id}`,sub:[item.customer_name,item.order_date?dateBR(item.order_date):''].filter(Boolean).join(' · ')};
   }
 
+  function renderVariantRow(v){
+    const row=document.createElement('div');row.className='order-variant-row';row.dataset.productId=String(v.productId);
+    const ids=v.items.map(i=>Number(i.order_item_id));
+    const selected=ids.length&&ids.every(id=>state.selected.has(id));
+    const note=v.items.some(hasNote);
+    const customers=v.customers.size,orders=v.orders.size;
+    const priceValues=[...new Set(v.items.filter(i=>i.unit_price!=null).map(i=>Number(i.unit_price).toFixed(2)))];
+    let priceText='';
+    if(priceValues.length===1&&typeof money==='function')priceText=` · ${money(Number(priceValues[0]))} por caixa`;
+    else if(priceValues.length>1)priceText=' · preços diferentes';
+    row.innerHTML=`<input class="check variant-check" type="checkbox" ${selected?'checked':''} aria-label="Selecionar todos os pedidos desta variação"><div class="variant-qty"><strong>${v.boxes}</strong><span>CX</span></div><div class="variant-copy"><strong>${esc(v.title)}${note?'<span class="note-alert-dot" title="Há observação em um ou mais pedidos"></span>':''}</strong><span>${customers} cliente${customers===1?'':'s'} · ${orders} pedido${orders===1?'':'s'}${priceText}</span></div><div class="variant-arrow">›</div>`;
+    row.querySelector('.variant-check').onclick=e=>{e.stopPropagation();const on=e.currentTarget.checked;ids.forEach(id=>on?state.selected.add(id):state.selected.delete(id));if(typeof updateSelection==='function')updateSelection()};
+    row.onclick=e=>{if(e.target.closest('.variant-check'))return;if(typeof openProductDetail==='function')openProductDetail(v.productId)};
+    return row;
+  }
+
   function renderModelGradeGroups(rows){
     const models=new Map();
     for(const row of rows){
-      compactRow(row);
       const i=itemByRow(row);if(!i)continue;
-      const p=productById(i.product_id),mk=keyNorm(modelName(p)),gk=keyNorm(gradeName(p));
+      const p=productById(i.product_id),mk=keyNorm(modelName(p)),gk=keyNorm(gradeName(p)),vk=String(i.product_id);
       if(!models.has(mk))models.set(mk,{title:modelName(p),grades:new Map(),boxes:0,customers:new Set(),orders:new Set()});
       const m=models.get(mk);m.boxes+=Number(i.quantity_remaining||0);m.customers.add(i.customer_id);m.orders.add(i.order_id);
-      if(!m.grades.has(gk))m.grades.set(gk,{title:gradeName(p),rows:[],boxes:0,customers:new Set(),orders:new Set(),products:new Set()});
-      const g=m.grades.get(gk);g.rows.push(row);g.boxes+=Number(i.quantity_remaining||0);g.customers.add(i.customer_id);g.orders.add(i.order_id);g.products.add(i.product_id);
+      if(!m.grades.has(gk))m.grades.set(gk,{title:gradeName(p),variants:new Map(),boxes:0,customers:new Set(),orders:new Set()});
+      const g=m.grades.get(gk);g.boxes+=Number(i.quantity_remaining||0);g.customers.add(i.customer_id);g.orders.add(i.order_id);
+      if(!g.variants.has(vk))g.variants.set(vk,{productId:Number(i.product_id),title:variationName(p),items:[],boxes:0,customers:new Set(),orders:new Set()});
+      const v=g.variants.get(vk);v.items.push(i);v.boxes+=Number(i.quantity_remaining||0);v.customers.add(i.customer_id);v.orders.add(i.order_id);
     }
     const frag=document.createDocumentFragment();
     for(const m of models.values()){
@@ -93,8 +111,10 @@
       for(const g of m.grades.values()){
         const grade=document.createElement('div');grade.className='order-grade-group';
         const gh=document.createElement('div');gh.className='order-grade-head';
-        gh.innerHTML=`<div><span class="grade-label">GRADE</span><strong>${esc(g.title)}</strong></div><div class="grade-stats"><strong>${g.boxes} CX</strong><span>${g.customers.size} cliente${g.customers.size===1?'':'s'} · ${g.orders.size} pedido${g.orders.size===1?'':'s'} · ${g.products.size} SKU${g.products.size===1?'':'s'}</span></div>`;
-        grade.appendChild(gh);g.rows.forEach(r=>grade.appendChild(r));sec.appendChild(grade);
+        gh.innerHTML=`<div><span class="grade-label">GRADE</span><strong>${esc(g.title)}</strong></div><div class="grade-stats"><strong>${g.boxes} CX</strong><span>${g.customers.size} cliente${g.customers.size===1?'':'s'} · ${g.orders.size} pedido${g.orders.size===1?'':'s'} · ${g.variants.size} variaç${g.variants.size===1?'ão':'ões'}</span></div>`;
+        grade.appendChild(gh);
+        for(const v of g.variants.values())grade.appendChild(renderVariantRow(v));
+        sec.appendChild(grade);
       }
       frag.appendChild(sec);
     }

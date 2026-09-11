@@ -66,12 +66,13 @@ export async function onRequest(context) {
     const refreshScript = '<script src="/js/live-refresh-variation.js?v=20260910-5" defer></script>';
     const deleteScript = '<script src="/js/delete-controls.js?v=20260910-1" defer></script>';
     const compactScript = '<script src="/js/compact-details.js?v=20260910-3" defer></script>';
-    const groupingScript = '<script src="/js/order-grouping.js?v=20260910-2" defer></script>';
+    const groupingScript = '<script src="/js/order-grouping.js?v=20260910-3" defer></script>';
     const mobileUxScript = '<script src="/js/mobile-ux-hardening.js?v=20260910-1" defer></script>';
     const denseScript = '<script src="/js/dense-customers-finance.js?v=20260910-1" defer></script>';
     const pwaScript = '<script src="/js/pwa-install.js?v=20260910-1" defer></script>';
     const pairPriceScript = '<script src="/js/pair-price-order.js?v=20260910-1" defer></script>';
-    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript, denseScript, pwaScript, pairPriceScript]) {
+    const homeQueueScript = '<script src="/js/home-full-queue.js?v=20260910-1" defer></script>';
+    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript, denseScript, pwaScript, pairPriceScript, homeQueueScript]) {
       const src = script.match(/src="([^"]+)/)?.[1];
       if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
     }

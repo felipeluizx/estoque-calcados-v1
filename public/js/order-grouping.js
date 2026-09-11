@@ -23,16 +23,20 @@
   function saveView(){localStorage.setItem(PREF,JSON.stringify(view))}
   function displayValue(i){const box=Number(i?.unit_price||0);return view.valueMode==='total'?box*Number(i?.quantity_ordered||0):box}
   function valueLabel(){return view.valueMode==='total'?'total do item':'por caixa'}
+  function activeSkuRows(productId){return (state.production||[]).filter(x=>Number(x.product_id)===Number(productId)&&Number(x.quantity_remaining)>0)}
 
   function ensureControls(){
     const sort=$('#orderSort');if(!sort)return;
     let wrap=$('.order-view-controls');
     if(!wrap){
       const host=sort.parentElement;wrap=document.createElement('div');wrap.className='order-view-controls';host.insertBefore(wrap,sort);
-      const group=document.createElement('select');group.id='orderGroupBy';group.setAttribute('aria-label','Agrupar pedidos por');group.innerHTML='<option value="order">Agrupar por pedido</option><option value="customer">Agrupar por cliente</option><option value="sku">Agrupar por SKU</option>';group.value=view.group||'order';
+      const group=document.createElement('select');group.id='orderGroupBy';group.setAttribute('aria-label','Visualização dos pedidos');group.innerHTML='<option value="order">Ver por pedido</option><option value="customer">Agrupar por cliente</option><option value="sku">Agrupar por SKU (juntar pedidos)</option>';group.value=view.group||'order';
       wrap.append(group,sort);
       group.onchange=()=>{view.group=group.value;saveView();renderProduction()};
       sort.title='Ordenar itens';
+    }else if($('#orderGroupBy')){
+      $('#orderGroupBy').innerHTML='<option value="order">Ver por pedido</option><option value="customer">Agrupar por cliente</option><option value="sku">Agrupar por SKU (juntar pedidos)</option>';
+      $('#orderGroupBy').value=view.group||'order';
     }
     if(!$('#orderValueMode')){
       const value=document.createElement('select');value.id='orderValueMode';value.setAttribute('aria-label','Exibir valor dos pedidos');value.innerHTML='<option value="box">Valor: por caixa</option><option value="total">Valor: total do item</option>';value.value=view.valueMode||'box';wrap.appendChild(value);value.onchange=()=>{view.valueMode=value.value;saveView();applyGrouping()};
@@ -49,7 +53,7 @@
     }
     let meta=row.querySelector('.order-compact-meta');
     if(!meta){meta=document.createElement('div');meta.className='order-compact-meta';title?.parentElement?.appendChild(meta)}
-    const parts=uniqueParts([p?.material,i.customer_name,`${Number(i.quantity_produced||0)}/${Number(i.quantity_ordered||0)} produzidas`]);
+    const parts=uniqueParts([p?.material,i.customer_name,`Pedido #${i.order_id}`,`${Number(i.quantity_produced||0)}/${Number(i.quantity_ordered||0)} produzidas`]);
     if(Number(i.unit_price)>=0&&typeof money==='function')parts.push(`${money(displayValue(i))} ${valueLabel()}`);
     meta.textContent=parts.join(' · ');
     row.querySelector('.customer-col')?.classList.add('order-hide-mobile-detail');
@@ -60,9 +64,14 @@
   }
 
   function groupInfo(item,mode){
-    if(mode==='customer')return {key:`c:${item.customer_id}`,title:item.customer_name||'Cliente',sub:`${(state.production||[]).filter(x=>Number(x.customer_id)===Number(item.customer_id)&&Number(x.quantity_remaining)>0).reduce((s,x)=>s+Number(x.quantity_remaining||0),0)} CX pendentes`};
+    if(mode==='customer'){
+      const rows=(state.production||[]).filter(x=>Number(x.customer_id)===Number(item.customer_id)&&Number(x.quantity_remaining)>0);
+      const boxes=rows.reduce((s,x)=>s+Number(x.quantity_remaining||0),0),orders=new Set(rows.map(x=>x.order_id)).size;
+      return {key:`c:${item.customer_id}`,title:item.customer_name||'Cliente',sub:`${boxes} CX pendentes · ${orders} pedido${orders===1?'':'s'}`};
+    }
     if(mode==='sku'){
-      const p=productById(item.product_id);return {key:`s:${item.product_id}`,title:mainProduct(p),sub:`${(state.production||[]).filter(x=>Number(x.product_id)===Number(item.product_id)&&Number(x.quantity_remaining)>0).reduce((s,x)=>s+Number(x.quantity_remaining||0),0)} CX pendentes`};
+      const p=productById(item.product_id),rows=activeSkuRows(item.product_id),boxes=rows.reduce((s,x)=>s+Number(x.quantity_remaining||0),0),customers=new Set(rows.map(x=>x.customer_id)).size,orders=new Set(rows.map(x=>x.order_id)).size;
+      return {key:`s:${item.product_id}`,title:mainProduct(p),sub:`${boxes} CX pendentes · ${customers} cliente${customers===1?'':'s'} · ${orders} pedido${orders===1?'':'s'}`,sku:true};
     }
     return {key:`o:${item.order_id}`,title:`Pedido #${item.order_id}`,sub:[item.customer_name,item.order_date?dateBR(item.order_date):''].filter(Boolean).join(' · ')};
   }
@@ -70,9 +79,10 @@
   function applyGrouping(){
     ensureControls();
     const list=$('#productionList');if(!list)return;
-    let rows=[...list.querySelectorAll('[data-item-id]')];
+    const rows=[...list.querySelectorAll('[data-item-id]')];
     if(!rows.length)return;
     const mode=$('#orderGroupBy')?.value||view.group||'order';
+    view.group=mode;saveView();
     const groups=new Map();
     rows.forEach(row=>{
       compactRow(row);
@@ -82,8 +92,8 @@
     });
     const frag=document.createDocumentFragment();
     for(const g of groups.values()){
-      const sec=document.createElement('section');sec.className='order-group';sec.dataset.groupKey=g.key;
-      const head=document.createElement('div');head.className='order-group-head';head.innerHTML=`<div><strong>${esc(g.title)}</strong><span>${esc(g.sub||'')}</span></div><span class="order-group-count">${g.rows.length} ${g.rows.length===1?'item':'itens'}</span>`;
+      const sec=document.createElement('section');sec.className='order-group'+(g.sku?' order-group-sku':'');sec.dataset.groupKey=g.key;
+      const head=document.createElement('div');head.className='order-group-head';head.innerHTML=`<div><strong>${esc(g.title)}</strong><span>${esc(g.sub||'')}</span></div><span class="order-group-count">${g.rows.length} ${g.rows.length===1?'linha':'linhas'}</span>`;
       sec.appendChild(head);g.rows.forEach(r=>sec.appendChild(r));frag.appendChild(sec);
     }
     list.replaceChildren(frag);

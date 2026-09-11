@@ -1,7 +1,7 @@
 (()=>{
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
   const PREF='estoque-v2-order-view';
-  let view={group:'order'};
+  let view={group:'order',valueMode:'box'};
   try{view={...view,...JSON.parse(localStorage.getItem(PREF)||'{}')}}catch{}
 
   const norm=s=>String(s??'').trim();
@@ -20,19 +20,23 @@
   function mainProduct(p){return uniqueParts([p?.modelo||p?.sku||'Produto',p?.variacao,p?.grade]).join(' · ')}
   function hasNote(i){return Boolean(norm(i?.order_notes)||norm(i?.item_notes))}
   function itemByRow(row){const id=Number(row.dataset.itemId);return (state.production||[]).find(i=>Number(i.order_item_id)===id)}
+  function saveView(){localStorage.setItem(PREF,JSON.stringify(view))}
+  function displayValue(i){const box=Number(i?.unit_price||0);return view.valueMode==='total'?box*Number(i?.quantity_ordered||0):box}
+  function valueLabel(){return view.valueMode==='total'?'total do item':'por caixa'}
 
   function ensureControls(){
-    if($('#orderGroupBy'))return;
     const sort=$('#orderSort');if(!sort)return;
-    const host=sort.parentElement;
-    const wrap=document.createElement('div');wrap.className='order-view-controls';
-    const group=document.createElement('select');group.id='orderGroupBy';group.setAttribute('aria-label','Agrupar pedidos por');
-    group.innerHTML='<option value="order">Agrupar por pedido</option><option value="customer">Agrupar por cliente</option><option value="sku">Agrupar por SKU</option>';
-    group.value=view.group||'order';
-    const sortLabel=document.createElement('span');sortLabel.className='order-sort-label';sortLabel.textContent='Ordenar';
-    host.insertBefore(wrap,sort);wrap.append(group,sortLabel,sort);
-    group.onchange=()=>{view.group=group.value;localStorage.setItem(PREF,JSON.stringify(view));renderProduction()};
-    sort.title='Ordenar itens';
+    let wrap=$('.order-view-controls');
+    if(!wrap){
+      const host=sort.parentElement;wrap=document.createElement('div');wrap.className='order-view-controls';host.insertBefore(wrap,sort);
+      const group=document.createElement('select');group.id='orderGroupBy';group.setAttribute('aria-label','Agrupar pedidos por');group.innerHTML='<option value="order">Agrupar por pedido</option><option value="customer">Agrupar por cliente</option><option value="sku">Agrupar por SKU</option>';group.value=view.group||'order';
+      wrap.append(group,sort);
+      group.onchange=()=>{view.group=group.value;saveView();renderProduction()};
+      sort.title='Ordenar itens';
+    }
+    if(!$('#orderValueMode')){
+      const value=document.createElement('select');value.id='orderValueMode';value.setAttribute('aria-label','Exibir valor dos pedidos');value.innerHTML='<option value="box">Valor: por caixa</option><option value="total">Valor: total do item</option>';value.value=view.valueMode||'box';wrap.appendChild(value);value.onchange=()=>{view.valueMode=value.value;saveView();applyGrouping()};
+    }
   }
 
   function compactRow(row){
@@ -46,10 +50,12 @@
     let meta=row.querySelector('.order-compact-meta');
     if(!meta){meta=document.createElement('div');meta.className='order-compact-meta';title?.parentElement?.appendChild(meta)}
     const parts=uniqueParts([p?.material,i.customer_name,`${Number(i.quantity_produced||0)}/${Number(i.quantity_ordered||0)} produzidas`]);
+    if(Number(i.unit_price)>=0&&typeof money==='function')parts.push(`${money(displayValue(i))} ${valueLabel()}`);
     meta.textContent=parts.join(' · ');
     row.querySelector('.customer-col')?.classList.add('order-hide-mobile-detail');
     row.querySelector('.metric')?.classList.add('order-hide-mobile-detail');
-    row.querySelector('.price-col')?.classList.add('order-hide-mobile-detail');
+    const price=row.querySelector('.price-col');
+    if(price){const strong=price.querySelector('strong'),label=price.querySelector('.meta');if(strong)strong.textContent=i.unit_price==null?'—':money(displayValue(i));if(label)label.textContent=valueLabel();price.classList.add('order-hide-mobile-detail')}
     row.classList.add('order-super-compact');
   }
 
@@ -62,8 +68,9 @@
   }
 
   function applyGrouping(){
+    ensureControls();
     const list=$('#productionList');if(!list)return;
-    const rows=[...list.children].filter(el=>el.matches?.('[data-item-id]'));
+    let rows=[...list.querySelectorAll('[data-item-id]')];
     if(!rows.length)return;
     const mode=$('#orderGroupBy')?.value||view.group||'order';
     const groups=new Map();

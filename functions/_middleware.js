@@ -43,7 +43,7 @@ export async function onRequest(context) {
       '<link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">',
       '<meta name="mobile-web-app-capable" content="yes">',
       '<meta name="apple-mobile-web-app-capable" content="yes">',
-      '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
+      '<meta name="apple-mobile-web-app-status-bar-style" content="black">',
       '<meta name="apple-mobile-web-app-title" content="Estoque">'
     ].join('');
     if (!html.includes('rel="manifest"')) html = html.includes('</head>') ? html.replace('</head>', `${pwaHead}</head>`) : `${pwaHead}${html}`;
@@ -52,7 +52,7 @@ export async function onRequest(context) {
     const refreshCss = '<link rel="stylesheet" href="/css/live-refresh-variation.css?v=20260910-3">';
     const compactCss = '<link rel="stylesheet" href="/css/compact-details.css?v=20260910-3">';
     const groupingCss = '<link rel="stylesheet" href="/css/order-grouping.css?v=20260911-1">';
-    const mobileUxCss = '<link rel="stylesheet" href="/css/mobile-ux-hardening.css?v=20260910-2">';
+    const mobileUxCss = '<link rel="stylesheet" href="/css/mobile-ux-hardening.css?v=20260911-1">';
     const denseCss = '<link rel="stylesheet" href="/css/dense-customers-finance.css?v=20260910-1">';
     for (const css of [gradeCss, refreshCss, compactCss, groupingCss, mobileUxCss, denseCss]) {
       const href = css.match(/href="([^"]+)/)?.[1];

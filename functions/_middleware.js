@@ -38,6 +38,16 @@ export async function onRequest(context) {
   }
 
   if (isMainApp) {
+    const pwaHead = [
+      '<link rel="manifest" href="/manifest.webmanifest">',
+      '<link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">',
+      '<meta name="mobile-web-app-capable" content="yes">',
+      '<meta name="apple-mobile-web-app-capable" content="yes">',
+      '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
+      '<meta name="apple-mobile-web-app-title" content="Estoque">'
+    ].join('');
+    if (!html.includes('rel="manifest"')) html = html.includes('</head>') ? html.replace('</head>', `${pwaHead}</head>`) : `${pwaHead}${html}`;
+
     const gradeCss = '<link rel="stylesheet" href="/css/grade-order.css?v=20260910-2">';
     const refreshCss = '<link rel="stylesheet" href="/css/live-refresh-variation.css?v=20260910-3">';
     const compactCss = '<link rel="stylesheet" href="/css/compact-details.css?v=20260910-3">';
@@ -59,7 +69,8 @@ export async function onRequest(context) {
     const groupingScript = '<script src="/js/order-grouping.js?v=20260910-1" defer></script>';
     const mobileUxScript = '<script src="/js/mobile-ux-hardening.js?v=20260910-1" defer></script>';
     const denseScript = '<script src="/js/dense-customers-finance.js?v=20260910-1" defer></script>';
-    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript, denseScript]) {
+    const pwaScript = '<script src="/js/pwa-install.js?v=20260910-1" defer></script>';
+    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript, denseScript, pwaScript]) {
       const src = script.match(/src="([^"]+)/)?.[1];
       if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
     }

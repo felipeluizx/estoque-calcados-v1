@@ -9,6 +9,7 @@ html.modal-open,body.modal-open{overflow:hidden!important;overscroll-behavior:no
 #customerDetailBody .customer-item-link,#customerDetailBody .customer-finance-link{padding:9px 10px!important;min-height:0!important}#customerDetailBody .customer-item-link .breakdown-top{gap:7px!important}#customerDetailBody .customer-item-link strong,#customerDetailBody .customer-finance-link strong{font-size:12px!important}#customerDetailBody .meta{font-size:9px!important}
 #financeDetailBody .history-entry{padding:8px 10px!important}#financeDetailBody .history-list{max-height:38vh;overflow:auto;overscroll-behavior:contain}
 @media(max-width:760px){
+  .mobile-head{box-sizing:border-box!important;padding-top:max(10px,env(safe-area-inset-top))!important;min-height:calc(58px + env(safe-area-inset-top))!important;align-items:center!important}
   .modal-backdrop.show{align-items:center!important}
   .modal-backdrop>.modal,.modal-backdrop>.detail-modal{width:calc(100vw - 20px)!important;max-width:none!important;max-height:calc(100dvh - 24px)!important;border-radius:17px!important}
   .modal-head{padding:11px 13px!important}.modal-head h3{font-size:16px!important}.modal-subtitle{font-size:9px!important;line-height:1.25!important}

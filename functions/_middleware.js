@@ -55,7 +55,8 @@ export async function onRequest(context) {
     const mobileUxCss = '<link rel="stylesheet" href="/css/mobile-ux-hardening.css?v=20260911-1">';
     const denseCss = '<link rel="stylesheet" href="/css/dense-customers-finance.css?v=20260910-1">';
     const productionStatusCss = '<link rel="stylesheet" href="/css/production-status-ux.css?v=20260914-1">';
-    for (const css of [gradeCss, refreshCss, compactCss, groupingCss, mobileUxCss, denseCss, productionStatusCss]) {
+    const financeCustomerCss = '<link rel="stylesheet" href="/css/finance-by-customer.css?v=20260914-1">';
+    for (const css of [gradeCss, refreshCss, compactCss, groupingCss, mobileUxCss, denseCss, productionStatusCss, financeCustomerCss]) {
       const href = css.match(/href="([^"]+)/)?.[1];
       if (href && !html.includes(href)) html = html.includes('</head>') ? html.replace('</head>', `${css}</head>`) : `${css}${html}`;
     }
@@ -74,7 +75,8 @@ export async function onRequest(context) {
     const pairPriceScript = '<script src="/js/pair-price-order.js?v=20260910-1" defer></script>';
     const homeQueueScript = '<script src="/js/home-full-queue.js?v=20260910-2" defer></script>';
     const productionStatusScript = '<script src="/js/production-status-ux.js?v=20260914-1" defer></script>';
-    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript, denseScript, pwaScript, pairPriceScript, homeQueueScript, productionStatusScript]) {
+    const financeCustomerScript = '<script src="/js/finance-by-customer.js?v=20260914-1" defer></script>';
+    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript, denseScript, pwaScript, pairPriceScript, homeQueueScript, productionStatusScript, financeCustomerScript]) {
       const src = script.match(/src="([^"]+)/)?.[1];
       if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
     }

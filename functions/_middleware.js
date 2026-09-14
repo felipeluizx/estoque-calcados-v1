@@ -65,7 +65,7 @@ export async function onRequest(context) {
     const compatScript = '<script src="/js/card-compat.js?v=20260910-1" defer></script>';
     const gradeScript = '<script src="/js/grade-order.js?v=20260910-3" defer></script>';
     const refreshScript = '<script src="/js/live-refresh-variation.js?v=20260910-5" defer></script>';
-    const deleteScript = '<script src="/js/delete-controls.js?v=20260910-1" defer></script>';
+    const deleteScript = '<script src="/js/delete-controls.js?v=20260914-1" defer></script>';
     const compactScript = '<script src="/js/compact-details.js?v=20260910-3" defer></script>';
     const groupingScript = '<script src="/js/order-grouping.js?v=20260911-1" defer></script>';
     const mobileUxScript = '<script src="/js/mobile-ux-hardening.js?v=20260910-1" defer></script>';

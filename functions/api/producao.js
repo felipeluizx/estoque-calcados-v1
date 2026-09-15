@@ -11,7 +11,7 @@ export async function onRequestGet({ request, env }) {
     if (!(await requireAdmin(request, env))) return unauthorized();
     await ensureV2Schema(env);
     const { results } = await env.DB.prepare(`
-      SELECT oi.id AS order_item_id,oi.order_id,oi.product_id,oi.quantity_ordered,oi.quantity_cancelled,oi.unit_price,oi.base_unit_price,oi.discount_percent,oi.notes AS item_notes,
+      SELECT oi.id AS order_item_id,oi.order_id,oi.product_id,oi.quantity_ordered,oi.quantity_cancelled,oi.unit_price,oi.base_unit_price,oi.discount_percent,oi.units_per_box,oi.production_week_start,oi.notes AS item_notes,
         o.pc,o.order_date,o.due_date,o.priority,o.notes AS order_notes,c.id AS customer_id,c.name AS customer_name,c.phone AS customer_phone,
         COALESCE(SUM(pm.quantity),0) AS quantity_produced
       FROM order_items oi JOIN orders o ON o.id=oi.order_id JOIN customers c ON c.id=o.customer_id
@@ -27,6 +27,7 @@ export async function onRequestGet({ request, env }) {
 export async function onRequestPost({ request, env }) {
   try {
     if (!(await requireAdmin(request, env))) return unauthorized();
+    await ensureV2Schema(env);
     const body=await request.json().catch(()=>({})),orderItemId=Number(body.order_item_id),quantity=Number(body.quantity);
     if(!orderItemId||quantity<=0)return json({ok:false,error:"Item e quantidade são obrigatórios."},400);
     const item=await env.DB.prepare(`SELECT oi.id,oi.quantity_ordered,oi.quantity_cancelled,COALESCE((SELECT SUM(pm.quantity) FROM production_movements pm WHERE pm.order_item_id=oi.id),0) AS quantity_produced FROM order_items oi WHERE oi.id=?`).bind(orderItemId).first();
@@ -41,6 +42,7 @@ export async function onRequestPost({ request, env }) {
 export async function onRequestDelete({ request, env }) {
   try {
     if (!(await requireAdmin(request, env))) return unauthorized();
+    await ensureV2Schema(env);
     const url=new URL(request.url);let id=Number(url.searchParams.get('id')||0);if(!id){const body=await request.json().catch(()=>({}));id=Number(body.id||0)}
     if(!id)return json({ok:false,error:'Movimentação inválida.'},400);
     const movement=await env.DB.prepare(`SELECT id,order_item_id,quantity FROM production_movements WHERE id=?`).bind(id).first();if(!movement)return json({ok:false,error:'Movimentação não encontrada.'},404);

@@ -56,7 +56,8 @@ export async function onRequest(context) {
     const denseCss = '<link rel="stylesheet" href="/css/dense-customers-finance.css?v=20260910-1">';
     const productionStatusCss = '<link rel="stylesheet" href="/css/production-status-ux.css?v=20260914-1">';
     const financeCustomerCss = '<link rel="stylesheet" href="/css/finance-by-customer.css?v=20260914-1">';
-    for (const css of [gradeCss, refreshCss, compactCss, groupingCss, mobileUxCss, denseCss, productionStatusCss, financeCustomerCss]) {
+    const productionWeekCss = '<link rel="stylesheet" href="/css/production-week.css?v=20260915-1">';
+    for (const css of [gradeCss, refreshCss, compactCss, groupingCss, mobileUxCss, denseCss, productionStatusCss, financeCustomerCss, productionWeekCss]) {
       const href = css.match(/href="([^"]+)/)?.[1];
       if (href && !html.includes(href)) html = html.includes('</head>') ? html.replace('</head>', `${css}</head>`) : `${css}${html}`;
     }
@@ -76,7 +77,8 @@ export async function onRequest(context) {
     const homeQueueScript = '<script src="/js/home-full-queue.js?v=20260910-2" defer></script>';
     const productionStatusScript = '<script src="/js/production-status-ux.js?v=20260914-1" defer></script>';
     const financeCustomerScript = '<script src="/js/finance-by-customer.js?v=20260914-1" defer></script>';
-    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript, denseScript, pwaScript, pairPriceScript, homeQueueScript, productionStatusScript, financeCustomerScript]) {
+    const productionWeekScript = '<script src="/js/production-week.js?v=20260915-1" defer></script>';
+    for (const script of [productsScript, cardScript, compatScript, gradeScript, refreshScript, deleteScript, compactScript, groupingScript, mobileUxScript, denseScript, pwaScript, pairPriceScript, homeQueueScript, productionStatusScript, financeCustomerScript, productionWeekScript]) {
       const src = script.match(/src="([^"]+)/)?.[1];
       if (src && !html.includes(src)) html = html.includes('</body>') ? html.replace('</body>', `${script}</body>`) : `${html}${script}`;
     }

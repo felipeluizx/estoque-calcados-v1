@@ -22,4 +22,17 @@ export async function ensureV2Schema(env) {
   if (!cols.has('units_per_box')) {
     await env.DB.prepare(`ALTER TABLE order_items ADD COLUMN units_per_box INTEGER`).run();
   }
+  if (!cols.has('production_week_start')) {
+    await env.DB.prepare(`ALTER TABLE order_items ADD COLUMN production_week_start TEXT`).run();
+  }
+
+  // Existing boxes inherit the Monday of the original launch date.
+  await env.DB.prepare(`
+    UPDATE order_items
+    SET production_week_start=(
+      SELECT date(substr(o.order_date,1,10), '-' || ((CAST(strftime('%w',substr(o.order_date,1,10)) AS INTEGER)+6)%7) || ' days')
+      FROM orders o WHERE o.id=order_items.order_id
+    )
+    WHERE production_week_start IS NULL OR production_week_start=''
+  `).run();
 }

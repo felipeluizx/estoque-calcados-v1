@@ -2,21 +2,22 @@
   const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
   const key=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()||'sem-info';
   function buildHierarchy(){
-    const active=(state.production||[]).filter(i=>Number(i.quantity_remaining)>0),models=new Map();
+    const active=(state.production||[]).filter(i=>Number(i.quantity_remaining||0)>0),models=new Map();
     for(const i of active){
+      const remaining=Number(i.quantity_remaining||0);if(remaining<=0)continue;
       const p=productById(i.product_id),model=String(p.modelo||p.sku||'Produto').trim(),grade=String(p.grade||'Sem grade').trim(),mk=key(model),gk=key(grade);
       if(!models.has(mk))models.set(mk,{title:model,boxes:0,customers:new Set(),orders:new Set(),grades:new Map()});
-      const m=models.get(mk);m.boxes+=Number(i.quantity_remaining||0);m.customers.add(i.customer_id);m.orders.add(i.order_id);
+      const m=models.get(mk);m.boxes+=remaining;m.customers.add(i.customer_id);m.orders.add(i.order_id);
       if(!m.grades.has(gk))m.grades.set(gk,{title:grade,boxes:0,customers:new Set(),orders:new Set(),products:new Set(),items:[],variations:new Set(),materials:new Set()});
-      const g=m.grades.get(gk);g.boxes+=Number(i.quantity_remaining||0);g.customers.add(i.customer_id);g.orders.add(i.order_id);g.products.add(i.product_id);g.items.push(i);if(p.variacao)g.variations.add(p.variacao);if(p.material)g.materials.add(p.material);
+      const g=m.grades.get(gk);g.boxes+=remaining;g.customers.add(i.customer_id);g.orders.add(i.order_id);g.products.add(i.product_id);g.items.push(i);if(p.variacao)g.variations.add(p.variacao);if(p.material)g.materials.add(p.material);
     }
-    return [...models.values()];
+    return [...models.values()].filter(m=>Number(m.boxes)>0).map(m=>({...m,grades:new Map([...m.grades].filter(([,g])=>Number(g.boxes)>0))})).filter(m=>m.grades.size>0);
   }
   function renderFullHomeQueue(){
     const list=$('#homeProductionList');if(!list)return;
     const models=buildHierarchy();
     list.innerHTML=models.length?models.map(m=>{
-      const grades=[...m.grades.values()].map(g=>{
+      const grades=[...m.grades.values()].filter(g=>Number(g.boxes)>0).map(g=>{
         const notes=g.items.some(i=>String(i.order_notes||i.item_notes||'').trim());
         const sub=[[...g.materials].join(', '),[...g.variations].join(', '),`${g.customers.size} cliente${g.customers.size===1?'':'s'}`,`${g.orders.size} pedido${g.orders.size===1?'':'s'}`,`${g.products.size} SKU${g.products.size===1?'':'s'}`].filter(Boolean).join(' · ');
         const only=[...g.products][0],pid=g.products.size===1?` data-product-id="${only}"`:'';

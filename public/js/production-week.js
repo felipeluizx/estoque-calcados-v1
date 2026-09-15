@@ -10,7 +10,7 @@
   const weekEnd=w=>{const [y,m,d]=w.split('-').map(Number);return iso(addDays(new Date(y,m-1,d),4))};
   const brDate=v=>{const [y,m,d]=String(v).split('-').map(Number);return `${pad(d)}/${pad(m)}`};
   const tokenNow=()=>sessionStorage.getItem('estoque-admin-token')||localStorage.getItem('estoque-admin-token')||'';
-  let settings={intake_closed:false},view='current',installed=false;
+  let settings={intake_closed:false},view='current',installed=false,canonicalProduction=null,restoreTimer=null;
 
   function weekLabel(w){return `${brDate(w)} a ${brDate(weekEnd(w))}`}
   function chosenWeek(){
@@ -58,7 +58,7 @@
 
   function ensurePanel(){
     if($('#productionWeekPanel'))return;
-    const page=$('#page-orders'),tabs=$('#orderTabs');if(!page||!tabs)return;
+    const tabs=$('#orderTabs');if(!tabs)return;
     const box=document.createElement('section');box.id='productionWeekPanel';box.className='production-week-panel';
     box.innerHTML=`<div class="week-main"><div><span class="week-eyebrow">CICLO DE PRODUÇÃO</span><strong id="weekTitle"></strong><small id="weekSubtitle"></small></div><span id="weekModeBadge" class="week-mode-badge"></span></div><div class="week-actions"><select id="productionWeekView"><option value="current">Semana atual</option><option value="next">Próxima semana</option><option value="previous">Remanescentes anteriores</option><option value="all">Todas as semanas</option></select><button class="btn secondary small" id="toggleWeekIntake"></button><button class="btn primary small hidden" id="carryWeekBtn"></button></div>`;
     tabs.before(box);
@@ -82,11 +82,11 @@
     if(settings.remnants>0){carry.classList.remove('hidden');carry.textContent=`Trazer ${settings.remnants} remanescente${settings.remnants===1?'':'s'} para esta semana`;}else carry.classList.add('hidden');
   }
   async function toggleIntake(){
-    try{await directApi('/api/semana-producao',{method:'PUT',body:JSON.stringify({intake_closed:!settings.intake_closed})});settings.intake_closed=!settings.intake_closed;updatePanelText();syncOrderWeekDefault();if(typeof toast==='function')toast(settings.intake_closed?'Semana atual fechada para novos pedidos.':'Recebimento da semana atual reaberto.')}catch(e){toast?.(e.message,true)}
+    try{await directApi('/api/semana-producao',{method:'PUT',body:JSON.stringify({intake_closed:!settings.intake_closed})});settings.intake_closed=!settings.intake_closed;updatePanelText();syncOrderWeekDefault();if(typeof toast==='function')toast(settings.intake_closed?'Semana atual fechada para novos pedidos.':'Recebimento da semana atual reaberto.')}catch(e){if(typeof toast==='function')toast(e.message,true)}
   }
   async function carryover(){
     if(!confirm(`Trazer todas as caixas pendentes de semanas anteriores para a semana ${weekLabel(weekNow())}?\n\nIsso não altera financeiro, cliente, preço nem histórico de produção.`))return;
-    try{const d=await directApi('/api/semana-producao',{method:'POST',body:JSON.stringify({action:'carryover',target_week:weekNow()})});if(typeof refreshData==='function')await refreshData();await loadWeekSettings();if(typeof toast==='function')toast(`${Number(d.moved||0)} caixa(s) incorporadas à semana atual.`)}catch(e){toast?.(e.message,true)}
+    try{const d=await directApi('/api/semana-producao',{method:'POST',body:JSON.stringify({action:'carryover',target_week:weekNow()})});if(typeof refreshData==='function')await refreshData();await loadWeekSettings();if(typeof toast==='function')toast(`${Number(d.moved||0)} caixa(s) incorporadas à semana atual.`)}catch(e){if(typeof toast==='function')toast(e.message,true)}
   }
 
   function inView(i){
@@ -99,8 +99,15 @@
   function scopedRender(name){
     const old=window[name];if(typeof old!=='function'||old.__weeklyWrapped)return;
     const fn=function(...args){
-      const full=state.production;state.production=(full||[]).filter(inView);
-      try{return old.apply(this,args)}finally{setTimeout(()=>{state.production=full},0)}
+      if(!canonicalProduction)canonicalProduction=state.production;
+      const full=canonicalProduction||state.production||[];
+      state.production=full.filter(inView);
+      let result;
+      try{result=old.apply(this,args)}finally{
+        clearTimeout(restoreTimer);
+        restoreTimer=setTimeout(()=>{state.production=canonicalProduction||full;canonicalProduction=null;restoreTimer=null},0);
+      }
+      return result;
     };fn.__weeklyWrapped=true;window[name]=fn;
     try{if(name==='renderProduction')renderProduction=fn;if(name==='renderHome')renderHome=fn}catch{}
   }

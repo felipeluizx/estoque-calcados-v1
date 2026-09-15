@@ -3,6 +3,7 @@ import { ensureV2Schema } from "../lib/v2-schema.js";
 
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
 const validWeek=v=>/^\d{4}-\d{2}-\d{2}$/.test(String(v||''));
+const validTime=v=>/^([01]\d|2[0-3]):[0-5]\d$/.test(String(v||''));
 
 async function getSetting(env,key,def=''){
   const r=await env.DB.prepare(`SELECT value FROM app_settings WHERE key=?`).bind(key).first();
@@ -19,13 +20,32 @@ async function weekStats(env,week){
   `).bind(week).first();
   return {boxes:Number(r?.boxes||0),pending:Number(r?.pending||0)};
 }
+async function bootstrapExistingPending(env,currentWeek){
+  if(!validWeek(currentWeek))return 0;
+  const marker=await getSetting(env,'production_week_existing_pending_bootstrap_v2','0');
+  if(marker==='1')return 0;
+  const r=await env.DB.prepare(`
+    UPDATE order_items SET production_week_start=?,updated_at=CURRENT_TIMESTAMP
+    WHERE (quantity_ordered-quantity_cancelled-COALESCE((SELECT SUM(pm.quantity) FROM production_movements pm WHERE pm.order_item_id=order_items.id),0))>0
+  `).bind(currentWeek).run();
+  await setSetting(env,'production_week_existing_pending_bootstrap_v2','1');
+  return Number(r.meta?.changes||0);
+}
+async function readSettings(env){
+  const closed=(await getSetting(env,'production_intake_closed','0'))==='1';
+  const cutoffDay=Math.min(7,Math.max(1,Number(await getSetting(env,'production_cutoff_day','5'))||5));
+  const cutoffTimeRaw=await getSetting(env,'production_cutoff_time','18:00');
+  const cutoffTime=validTime(cutoffTimeRaw)?cutoffTimeRaw:'18:00';
+  return {intake_closed:closed,cutoff_day:cutoffDay,cutoff_time:cutoffTime};
+}
 
 export async function onRequestGet({request,env}){
   try{
     if(!(await requireAdmin(request,env)))return unauthorized();
     await ensureV2Schema(env);
     const url=new URL(request.url),currentWeek=url.searchParams.get('current_week'),nextWeek=url.searchParams.get('next_week');
-    const closed=(await getSetting(env,'production_intake_closed','0'))==='1';
+    const bootstrapMoved=await bootstrapExistingPending(env,currentWeek);
+    const settings=await readSettings(env);
     let remnants=0,current=null,next=null;
     if(validWeek(currentWeek)){
       const rr=await env.DB.prepare(`
@@ -36,7 +56,7 @@ export async function onRequestGet({request,env}){
       remnants=Number(rr?.count||0);current=await weekStats(env,currentWeek);
     }
     if(validWeek(nextWeek))next=await weekStats(env,nextWeek);
-    return json({ok:true,settings:{intake_closed:closed},remnants,current,next});
+    return json({ok:true,settings,bootstrap_moved:bootstrapMoved,remnants,current,next});
   }catch(err){return json({ok:false,error:err.message},500)}
 }
 
@@ -45,9 +65,12 @@ export async function onRequestPut({request,env}){
     if(!(await requireAdmin(request,env)))return unauthorized();
     await ensureV2Schema(env);
     const body=await request.json().catch(()=>({}));
-    if(body.intake_closed===undefined)return json({ok:false,error:'Informe intake_closed.'},400);
-    await setSetting(env,'production_intake_closed',body.intake_closed?'1':'0');
-    return json({ok:true,settings:{intake_closed:!!body.intake_closed}});
+    let changed=false;
+    if(body.intake_closed!==undefined){await setSetting(env,'production_intake_closed',body.intake_closed?'1':'0');changed=true}
+    if(body.cutoff_day!==undefined){const day=Number(body.cutoff_day);if(!Number.isInteger(day)||day<1||day>7)return json({ok:false,error:'Dia de corte inválido.'},400);await setSetting(env,'production_cutoff_day',String(day));changed=true}
+    if(body.cutoff_time!==undefined){const time=String(body.cutoff_time||'');if(!validTime(time))return json({ok:false,error:'Horário de corte inválido.'},400);await setSetting(env,'production_cutoff_time',time);changed=true}
+    if(!changed)return json({ok:false,error:'Nenhuma configuração informada.'},400);
+    return json({ok:true,settings:await readSettings(env)});
   }catch(err){return json({ok:false,error:err.message},500)}
 }
 
